@@ -22,21 +22,26 @@ import play.api.i18n.Messages.Implicits._
 import play.api.mvc._
 import uk.gov.hmrc.helptosavefrontend.connectors.EligibilityConnector
 import uk.gov.hmrc.play.frontend.controller.FrontendController
-import uk.gov.hmrc.helptosavefrontend.views
+import uk.gov.hmrc.helptosavefrontend.{FrontendAuthConnector, views}
+import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisedFunctions}
 
 import scala.concurrent.Future
 
-class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends FrontendController {
+class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends FrontendController with AuthorisedFunctions {
 
   val nino = "A434387534D"
+  val authConnector = FrontendAuthConnector
 
   val notEligible = Action.async { implicit request ⇒
     Future.successful(Ok(views.html.core.not_eligibile()))
   }
 
-  val start = Action.async{ implicit request ⇒
-    Future.successful(Ok(views.html.core.start()))
-  }
+  val start =
+    Action.async { implicit request ⇒
+      authorised() {
+        Future.successful(Ok(views.html.core.start()))
+      }
+    }
 
   val declaration =
     Action.async { implicit request ⇒
@@ -46,5 +51,5 @@ class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends F
             views.html.core.not_eligibile(),
             user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
           )))
-  }
+    }
 }
