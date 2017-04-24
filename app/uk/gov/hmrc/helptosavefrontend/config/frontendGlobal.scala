@@ -21,8 +21,8 @@ import java.io.File
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
-import play.api.mvc.Request
-import play.api.{Application, Configuration, Play}
+import play.api.mvc.{Request, RequestHeader}
+import play.api.{Application, Configuration, Environment, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
@@ -32,10 +32,19 @@ import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 import play.api.i18n.Messages.Implicits._
 import play.api.Play.current
+import uk.gov.hmrc.auth.core.NoActiveSession
+import uk.gov.hmrc.auth.frontend.Redirects
 
 
 object FrontendGlobal
-  extends DefaultFrontendGlobal {
+  extends DefaultFrontendGlobal with Redirects {
+  val config = Play.current.configuration
+  val env = Environment(Play.current.path, Play.current.classloader, Play.current.mode)
+
+  override def resolveError(rh: RequestHeader, ex: Throwable) = ex match {
+    case _: NoActiveSession => toGGLogin("/declaration")
+    case _ => super.resolveError(rh, ex)
+  }
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
@@ -70,3 +79,4 @@ object AuditFilter extends FrontendAuditFilter with RunMode with AppName with Mi
 
   override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 }
+
