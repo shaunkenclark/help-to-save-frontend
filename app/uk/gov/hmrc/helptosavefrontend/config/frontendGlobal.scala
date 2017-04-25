@@ -32,17 +32,20 @@ import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 import play.api.i18n.Messages.Implicits._
 import play.api.Play.current
-import uk.gov.hmrc.auth.core.NoActiveSession
+import uk.gov.hmrc.auth.core.{InsufficientEnrolments, NoActiveSession}
 import uk.gov.hmrc.auth.frontend.Redirects
 
 
 object FrontendGlobal
   extends DefaultFrontendGlobal with Redirects {
-  val config = Play.current.configuration
-  val env = Environment(Play.current.path, Play.current.classloader, Play.current.mode)
+  lazy val config = Play.current.configuration
+  lazy val env = Environment(Play.current.path, Play.current.classloader, Play.current.mode)
 
   override def resolveError(rh: RequestHeader, ex: Throwable) = ex match {
-    case _: NoActiveSession => toGGLogin("/declaration")
+    case _: NoActiveSession => toGGLogin(uk.gov.hmrc.helptosavefrontend.controllers.routes.HelpToSave.declaration().absoluteURL()(rh))
+    case _: InsufficientEnrolments =>
+      println("%%%%%%%%%%%%%%%%%% INSUFFICIENT ENROLLMENT " + ex.getMessage)
+      super.resolveError(rh, ex)
     case _ => super.resolveError(rh, ex)
   }
 

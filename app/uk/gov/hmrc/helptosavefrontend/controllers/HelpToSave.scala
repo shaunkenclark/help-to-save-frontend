@@ -20,10 +20,12 @@ import com.google.inject.Inject
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.mvc._
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.helptosavefrontend.connectors.EligibilityConnector
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.helptosavefrontend.{FrontendAuthConnector, views}
-import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisedFunctions}
+import uk.gov.hmrc.auth.core.{AuthProviders, AuthorisedFunctions, Enrolment}
+import uk.gov.hmrc.auth.core.Retrievals.userDetailsUri
 
 import scala.concurrent.Future
 
@@ -44,12 +46,15 @@ class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends F
     }
 
   val declaration =
-    Action.async { implicit request ⇒
-      eligibilityConnector.checkEligibility(nino)
-        .map(result ⇒
-          Ok(result.fold(
-            views.html.core.not_eligibile(),
-            user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
-          )))
+    Action.async {
+      implicit request ⇒
+        val bearerToken = hc.authorization.fold("Unknown")(_.value)
+        println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% DECLARATION BEARER TOKEN AFTER AUTH = " + bearerToken)
+        eligibilityConnector.checkEligibility(nino)
+          .map(result ⇒
+            Ok(result.fold(
+              views.html.core.not_eligibile(),
+              user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
+            )))
     }
 }
