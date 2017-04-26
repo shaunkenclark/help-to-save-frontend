@@ -24,7 +24,7 @@ import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.helptosavefrontend.connectors.EligibilityConnector
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.helptosavefrontend.{FrontendAuthConnector, views}
-import uk.gov.hmrc.auth.core.{AuthProviders, AuthorisedFunctions, Enrolment}
+import uk.gov.hmrc.auth.core.{AuthProviders, AuthorisedFunctions, ConfidenceLevel, Enrolment}
 import uk.gov.hmrc.auth.core.Retrievals.userDetailsUri
 
 import scala.concurrent.Future
@@ -45,17 +45,34 @@ class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends F
       }
     }
 
+  //  val declaration =
+  //    Action.async {
+  //      implicit request ⇒
+  //        authorised(Enrolment("IR-SA") and AuthProviders(GovernmentGateway)).retrieve(userDetailsUri) { uri =>
+  //          println("%%%%%%%%%%%%%%%%%%%%%%% User details URI = " + uri)
+  //          eligibilityConnector.checkEligibility(nino)
+  //            .map(result ⇒
+  //              Ok(result.fold(
+  //                views.html.core.not_eligibile(),
+  //                user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
+  //              )))
+  //        }
+  //    }
+
   val declaration =
     Action.async {
       implicit request ⇒
-        authorised(Enrolment("IR-SA") and AuthProviders(GovernmentGateway)).retrieve(userDetailsUri) { uri =>
-          println("%%%%%%%%%%%%%%%%%%%%%%% User details URI = " + uri)
-          eligibilityConnector.checkEligibility(nino)
-            .map(result ⇒
-              Ok(result.fold(
-                views.html.core.not_eligibile(),
-                user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
-              )))
+        authorised(Enrolment("HMRC-NI").withConfidenceLevel(ConfidenceLevel.L100) and AuthProviders(GovernmentGateway)).retrieve(userDetailsUri) { (thing: Option[String]) =>
+          val msg = thing.fold("UNKNOWN") { (theThing: String) =>
+            "%%%%%%%%%%%%%%%%%%%%%%% User details THING = " + theThing
+          }
+          println(msg)
+            eligibilityConnector.checkEligibility(nino)
+              .map(result ⇒
+                Ok(result.fold(
+                  views.html.core.not_eligibile(),
+                  user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
+                )))
         }
     }
 }
