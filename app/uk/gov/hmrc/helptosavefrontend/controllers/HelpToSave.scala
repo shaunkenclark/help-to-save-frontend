@@ -48,13 +48,14 @@ class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends F
   val declaration =
     Action.async {
       implicit request ⇒
-        val bearerToken = hc.authorization.fold("Unknown")(_.value)
-        println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% DECLARATION BEARER TOKEN AFTER AUTH = " + bearerToken)
-        eligibilityConnector.checkEligibility(nino)
-          .map(result ⇒
-            Ok(result.fold(
-              views.html.core.not_eligibile(),
-              user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
-            )))
+        authorised(Enrolment("IR-SA") and AuthProviders(GovernmentGateway)).retrieve(userDetailsUri) { uri =>
+          println("%%%%%%%%%%%%%%%%%%%%%%% User details URI = " + uri)
+          eligibilityConnector.checkEligibility(nino)
+            .map(result ⇒
+              Ok(result.fold(
+                views.html.core.not_eligibile(),
+                user ⇒ uk.gov.hmrc.helptosavefrontend.views.html.register.declaration(user)
+              )))
+        }
     }
 }
