@@ -34,6 +34,7 @@ import play.api.i18n.Messages.Implicits._
 import play.api.Play.current
 import uk.gov.hmrc.auth.core.{InsufficientEnrolments, NoActiveSession}
 import uk.gov.hmrc.auth.frontend.Redirects
+import play.api.mvc.Results._
 
 
 object FrontendGlobal
@@ -45,7 +46,7 @@ object FrontendGlobal
     case _: NoActiveSession => toGGLogin(uk.gov.hmrc.helptosavefrontend.controllers.routes.HelpToSave.declaration().absoluteURL()(rh))
     case _: InsufficientEnrolments =>
       println("%%%%%%%%%%%%%%%%%% INSUFFICIENT ENROLLMENT " + ex.getMessage)
-      super.resolveError(rh, ex)
+      Redirect(uk.gov.hmrc.helptosavefrontend.controllers.routes.HelpToSave.insufficientEnrolment().absoluteURL()(rh))
     case _ => super.resolveError(rh, ex)
   }
 
