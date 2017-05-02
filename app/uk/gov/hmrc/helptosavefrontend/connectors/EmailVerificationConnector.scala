@@ -19,17 +19,28 @@ package uk.gov.hmrc.helptosavefrontend.connectors
 import com.google.inject.{ImplementedBy, Singleton}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
+
 import scala.concurrent.Future
 import play.api.mvc.Results
+import uk.gov.hmrc.helptosavefrontend.models.{EmailVerifyResult, emailSent}
+import uk.gov.hmrc.helptosavefrontend.WSHttp
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[EmailVerificationConnectorImpl])
 trait EmailVerificationConnector {
-  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[Results]
+  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult]
   def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean]
 }
 
 @Singleton()
 class EmailVerificationConnectorImpl extends EmailVerificationConnector with ServicesConfig {
-  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[Any] = Future.successful(Results.NotFound)
-  def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean] = Future.successful(false)
+  private val emailVerificationURL: String = baseUrl("email-verification")
+  private val sendURL = "verification-requests"
+  private def verifyURL(email: String) = s"verified-email-addresses/$email"
+  private val http = WSHttp
+
+  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult] = Future.successful(emailSent)
+
+  def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean] = http.GET(s"$emailVerificationURL/${verifyURL(email)}").map { _.status == 201}
 }
