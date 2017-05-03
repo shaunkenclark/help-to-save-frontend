@@ -59,6 +59,6 @@ class EmailVerificationConnectorImpl extends EmailVerificationConnector with Ser
   //Note that the generic verificatio service is unable to distinquish between an unverified address, and an address for which
   //no confirmation email has been sent.
   def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean] = http.GET(s"$emailVerificationURL/${verifyURL(email)}").map {
-    _.status == 201
+    _.status == 200
   }
 }

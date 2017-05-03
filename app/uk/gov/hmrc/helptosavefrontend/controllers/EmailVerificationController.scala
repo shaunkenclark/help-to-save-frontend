@@ -46,7 +46,10 @@ class EmailVerificationController @Inject()(val messagesApi: MessagesApi,
     val boundForm = emailForm.bindFromRequest()
 
     boundForm.fold(formWithErrors => Future.successful(BadRequest(views.html.email_verification.send_confirmation(Some(formWithErrors)))),
-      (value: String) => Future.successful(Ok(value)))
+      (emailAddress: String) => {
+        // Connector used here.
+        Future.successful(Ok(emailAddress))
+      })
   }
 
 }
