@@ -17,19 +17,19 @@
 package uk.gov.hmrc.helptosavefrontend.connectors
 
 import com.google.inject.{ImplementedBy, Singleton}
-import uk.gov.hmrc.play.http.HeaderCarrier
+import play.api.libs.json.Json
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.Future
-import play.api.mvc.Results
-import uk.gov.hmrc.helptosavefrontend.models.{EmailVerifyResult, emailSent}
+import uk.gov.hmrc.helptosavefrontend.models.{EmailVerifyResult, emailSent, emailAlreadyVerified, serverProblem}
 import uk.gov.hmrc.helptosavefrontend.WSHttp
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[EmailVerificationConnectorImpl])
 trait EmailVerificationConnector {
-  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult]
+  def sendVerificationEmail(email: String, continueUrl: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult]
   def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean]
 }
 
@@ -40,7 +40,25 @@ class EmailVerificationConnectorImpl extends EmailVerificationConnector with Ser
   private def verifyURL(email: String) = s"verified-email-addresses/$email"
   private val http = WSHttp
 
-  def sendVerificationEmail(email: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult] = Future.successful(emailSent)
+  def sendVerificationEmail(email: String, continueUrl: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult] = {
+    val request = Json.obj(
+      "email" -> email,
+      "templateId" -> "verifyEmailAddress",
+      "templateParameters" -> Json.obj(),
+      "linkExpiryDuration" -> "P1D",
+      "continueUrl" -> continueUrl
+    )
 
-  def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean] = http.GET(s"$emailVerificationURL/${verifyURL(email)}").map { _.status == 201}
+    http.POST(s"$emailVerificationURL/$sendURL", request).map {
+      case HttpResponse(201, _, _, _) => emailSent
+      case HttpResponse(409, _, _, _) => emailAlreadyVerified
+      case _ => serverProblem
+    }
+  }
+
+  //Note that the generic verificatio service is unable to distinquish between an unverified address, and an address for which
+  //no confirmation email has been sent.
+  def isVerified(email: String)(implicit hc: HeaderCarrier): Future[Boolean] = http.GET(s"$emailVerificationURL/${verifyURL(email)}").map {
+    _.status == 201
+  }
 }
