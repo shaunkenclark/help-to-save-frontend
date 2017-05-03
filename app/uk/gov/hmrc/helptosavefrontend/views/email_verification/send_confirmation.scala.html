@@ -1,0 +1,44 @@
+@*
+ * Copyright 2017 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@(form: Option[Form[String]] = None)(implicit request: Request[_], messages: Messages)
+
+@import uk.gov.hmrc.play.views.html._
+@import uk.gov.hmrc.helptosavefrontend.views.html.htsHelpers.{alt_submit_button, alt_input_text}
+@import uk.gov.hmrc.helptosavefrontend.utils.FormHelpers
+
+@uk.gov.hmrc.helptosavefrontend.views.html.main_template(title = Messages("hts.email-verification.title"), bodyClasses = None) {
+    <header class="page-header text">
+        <h1>@Messages("hts.email-verification.title")</h1>
+    </header>
+        &nbsp;
+        &nbsp;
+    @helpers.form(action = uk.gov.hmrc.helptosavefrontend.controllers.routes.EmailVerificationController.onPageSubmit(), 'autoComplete -> "off") {
+
+        @* @rnrbHelpers.error_summary(FormHelpers.getAllErrors(form)) *@
+
+
+        @alt_input_text(
+            id = "email-address",
+            name = "email-address",
+            errorKey = FormHelpers.getErrorByKey(form, "email-address"),
+            label = messages("hts.email-verification.title"),
+            labelClass = Some("visually-hidden"),
+            secondaryLabel = Some("address"))
+
+        @alt_submit_button()
+    }
+}

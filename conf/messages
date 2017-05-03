@@ -1,3 +1,5 @@
+site.continue=Continue
+
 hts.core.apply-help-to-save.header-page=Apply help to save
 hts.core.apply-help-to-save.header=Apply for Help to Save
 hts.core.apply-help-to-save.header-1=3. Apply
@@ -161,3 +163,5 @@ hts.identitycheck.header.page=HMRC Help to Save Identity verification
 hts.identitycheck.failed=You need 2-step verification to use Help to Save Account
 hts.login.if_you_have_query_contact_HMRC=If you have a query you can <a href="{0}" target="_blank">contact HM Revenue and Customs (opens in a new window)</a> to get help.
 hts.login.back_to_2step_verification=Back to 2-step verification
+
+hts.email-verification.title=Confirm your email address

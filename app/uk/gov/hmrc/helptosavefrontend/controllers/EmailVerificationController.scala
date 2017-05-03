@@ -20,11 +20,33 @@ import javax.inject.Singleton
 
 import com.google.inject.Inject
 import play.api.i18n.{I18nSupport, MessagesApi}
+import play.api.mvc._
 import uk.gov.hmrc.helptosavefrontend.connectors.EmailVerificationConnector
+import uk.gov.hmrc.helptosavefrontend.views
 import uk.gov.hmrc.play.frontend.controller.FrontendController
+import play.api.data.{Form, FormError}
+import play.api.data.Forms._
+import scala.concurrent.Future
 
 @Singleton
 class EmailVerificationController @Inject()(val messagesApi: MessagesApi,
                                             verificationConnector: EmailVerificationConnector)   extends FrontendController with I18nSupport  {
+
+  val emailForm: Form[String] = Form(
+    single(
+      "email-address" -> email
+    )
+  )
+
+  def onPageLoad(): Action[AnyContent] = Action.async {request =>
+    Future.successful(Ok(views.html.email_verification.send_confirmation(Some(emailForm))(request, messagesApi.preferred(request))))
+  }
+
+  def onPageSubmit(): Action[AnyContent] = Action.async {implicit request =>
+    val boundForm = emailForm.bindFromRequest()
+
+    boundForm.fold(formWithErrors => Future.successful(BadRequest(views.html.email_verification.send_confirmation(Some(formWithErrors)))),
+      (value: String) => Future.successful(Ok(value)))
+  }
 
 }

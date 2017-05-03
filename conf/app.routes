@@ -8,3 +8,6 @@ GET        /eligibility                           @uk.gov.hmrc.helptosavefronten
 GET        /register/create-a-account             @uk.gov.hmrc.helptosavefrontend.controllers.Register.getCreateAccountHelpToSave
 GET        /register/declaration                  @uk.gov.hmrc.helptosavefrontend.controllers.Register.declaration
 GET        /register/identity-check-failed        @uk.gov.hmrc.helptosavefrontend.controllers.Register.identityCheckFailed
+
+GET        /email-verify/send                     @uk.gov.hmrc.helptosavefrontend.controllers.EmailVerificationController.onPageLoad()
+POST       /email-verify/send                     @uk.gov.hmrc.helptosavefrontend.controllers.EmailVerificationController.onPageSubmit()
