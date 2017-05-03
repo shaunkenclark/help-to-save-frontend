@@ -30,7 +30,7 @@ import scala.concurrent.Future
 
 @Singleton
 class EmailVerificationController @Inject()(val messagesApi: MessagesApi,
-                                            verificationConnector: EmailVerificationConnector)   extends FrontendController with I18nSupport  {
+                                            val verificationConnector: EmailVerificationConnector)   extends FrontendController with I18nSupport  {
 
   val emailForm: Form[String] = Form(
     single(
@@ -47,7 +47,7 @@ class EmailVerificationController @Inject()(val messagesApi: MessagesApi,
 
     boundForm.fold(formWithErrors => Future.successful(BadRequest(views.html.email_verification.send_confirmation(Some(formWithErrors)))),
       (emailAddress: String) => {
-        // Connector used here.
+        verificationConnector.sendVerificationEmail(emailAddress, "jsdkhfkjds")
         Future.successful(Ok(emailAddress))
       })
   }
