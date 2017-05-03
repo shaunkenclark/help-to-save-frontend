@@ -48,7 +48,7 @@ class EmailVerificationController @Inject()(val messagesApi: MessagesApi,
     boundForm.fold(formWithErrors => Future.successful(BadRequest(views.html.email_verification.send_confirmation(Some(formWithErrors)))),
       (emailAddress: String) => {
         verificationConnector.sendVerificationEmail(emailAddress, "jsdkhfkjds")
-        Future.successful(Ok(emailAddress))
+        Future.successful(Ok(views.html.email_verification.confirm_sent(emailAddress)))
       })
   }
 

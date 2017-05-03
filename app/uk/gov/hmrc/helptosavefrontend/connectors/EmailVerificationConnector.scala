@@ -36,8 +36,8 @@ trait EmailVerificationConnector {
 @Singleton()
 class EmailVerificationConnectorImpl extends EmailVerificationConnector with ServicesConfig {
   private val emailVerificationURL: String = baseUrl("email-verification")
-  private val sendURL = "verification-requests"
-  private def verifyURL(email: String) = s"verified-email-addresses/$email"
+  private val sendURL = "email-verification/verification-requests"
+  private def verifyURL(email: String) = s"email-verification/verified-email-addresses/$email"
   private val http = WSHttp
 
   def sendVerificationEmail(email: String, continueUrl: String)(implicit hc: HeaderCarrier): Future[EmailVerifyResult] = {
@@ -52,7 +52,7 @@ class EmailVerificationConnectorImpl extends EmailVerificationConnector with Ser
     http.POST(s"$emailVerificationURL/$sendURL", request).map {
       case HttpResponse(201, _, _, _) => emailSent
       case HttpResponse(409, _, _, _) => emailAlreadyVerified
-      case _ => serverProblem
+      case HttpResponse(status, _, _, _) => serverProblem
     }
   }
 
