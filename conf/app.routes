@@ -4,3 +4,5 @@ GET        /declaration              @uk.gov.hmrc.helptosavefrontend.controllers
 GET        /insufficient-enrollment  @uk.gov.hmrc.helptosavefrontend.controllers.HelpToSave.insufficientEnrolment
 GET        /not-eligible             @uk.gov.hmrc.helptosavefrontend.controllers.HelpToSave.notEligible
 GET        /                         @uk.gov.hmrc.helptosavefrontend.controllers.HelpToSave.start
+GET        /logged-in                @uk.gov.hmrc.helptosavefrontend.controllers.HelpToSave.loggedIn
+GET        /protected                @uk.gov.hmrc.helptosavefrontend.controllers.ProtectedController.onPageLoad

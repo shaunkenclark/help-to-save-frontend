@@ -24,12 +24,8 @@ import uk.gov.hmrc.play.frontend.controller.FrontendController
 
 import scala.concurrent.Future
 
-trait ProtectedController {
-  def onPageLoad(): Action[AnyContent]
-}
-
 @Singleton
-class ProtectedControllerImpl @Inject()() extends FrontendController with AuthorisedFunctions {
+class ProtectedController @Inject()() extends FrontendController with AuthorisedFunctions {
   val authConnector = FrontendAuthConnector 
 
   def onPageLoad() = Action.async {implicit request =>

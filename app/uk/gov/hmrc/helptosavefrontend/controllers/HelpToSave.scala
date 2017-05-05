@@ -51,6 +51,10 @@ class HelpToSave @Inject()(eligibilityConnector: EligibilityConnector) extends F
     Future.successful(Ok("Insufficient Enrollment"))
   }
 
+  val loggedIn = Action.async { implicit request =>
+    Future.successful(Ok("Logged in"))
+  }
+
   val declaration =
     Action.async {
       implicit request ⇒
