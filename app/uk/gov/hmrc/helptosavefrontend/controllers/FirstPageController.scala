@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.helptosavefrontend.controllers
 
-import com.google.inject.{Singleton, Inject}
-import play.api.mvc.{Action, AnyContent}
+import com.google.inject.{Inject, Singleton}
+import play.api.mvc.Action
 import uk.gov.hmrc.auth.core.AuthorisedFunctions
 import uk.gov.hmrc.helptosavefrontend.FrontendAuthConnector
 import uk.gov.hmrc.play.frontend.controller.FrontendController
@@ -25,12 +25,12 @@ import uk.gov.hmrc.play.frontend.controller.FrontendController
 import scala.concurrent.Future
 
 @Singleton
-class ProtectedController @Inject()() extends FrontendController with AuthorisedFunctions {
-  val authConnector = FrontendAuthConnector 
+class FirstPageController @Inject()() extends FrontendController with AuthorisedFunctions {
+  val authConnector = FrontendAuthConnector
 
-  def onPageLoad() = Action.async {implicit request =>
+  def onPageLoad() = Action.async { implicit request =>
     authorised() {
-      Future.successful(Ok("Protected - you'll see this if the bearer token is set."))
+      Future.successful(Ok("Logged In"))
     }
   }
 }
