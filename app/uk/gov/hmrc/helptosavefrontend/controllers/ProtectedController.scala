@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosavefrontend.controllers
 
+import com.google.inject.{Singleton, Inject}
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthorisedFunctions
 import uk.gov.hmrc.helptosavefrontend.FrontendAuthConnector
@@ -27,8 +28,9 @@ trait ProtectedController {
   def onPageLoad(): Action[AnyContent]
 }
 
-class ProtectedControllerImpl extends FrontendController with AuthorisedFunctions {
-  val authConnector = FrontendAuthConnector
+@Singleton
+class ProtectedControllerImpl @Inject()() extends FrontendController with AuthorisedFunctions {
+  val authConnector = FrontendAuthConnector 
 
   def onPageLoad() = Action.async {implicit request =>
     authorised() {
