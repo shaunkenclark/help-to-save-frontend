@@ -21,6 +21,7 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthorisedFunctions
 import uk.gov.hmrc.helptosavefrontend.FrontendAuthConnector
 import uk.gov.hmrc.play.frontend.controller.FrontendController
+import uk.gov.hmrc.auth.core.Retrievals.userDetailsUri
 
 import scala.concurrent.Future
 
@@ -29,8 +30,8 @@ class ProtectedController @Inject()() extends FrontendController with Authorised
   val authConnector = FrontendAuthConnector 
 
   def onPageLoad() = Action.async {implicit request =>
-    authorised() {
-      Future.successful(Ok("Protected - you'll see this if the bearer token is set."))
+    authorised().retrieve(userDetailsUri) {uri =>
+      Future.successful(Ok("Protected - you'll see this if the bearer token is set. the Uri is " + uri))
     }
   }
 }
