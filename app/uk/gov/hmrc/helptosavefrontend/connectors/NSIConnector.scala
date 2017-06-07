@@ -29,6 +29,7 @@ import uk.gov.hmrc.helptosavefrontend.models.NSIUserInfo
 import uk.gov.hmrc.helptosavefrontend.util.JsErrorOps._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http._
+import uk.gov.hmrc.helptosavefrontend.util._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -53,6 +54,8 @@ object NSIConnector {
 @Singleton
 class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
+  import Toggles._
+
   val nsiUrl: String = baseUrl("nsi")
   val nsiUrlEnd: String = getString("microservice.services.nsi.url")
   val url = s"$nsiUrl/$nsiUrlEnd"
@@ -72,7 +75,14 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
   val httpProxy = new WSHttpProxy
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-    Logger.info(s"Trying to create an account for ${userInfo.NINO} using NSI endpoint $url")
+
+    FEATURE("json-nsi-schema-validation") enabled {
+      println("%%%%%%% HELLO WORLD")
+    } otherwise {
+      println("%%%%%%% GOODBYE WORLD")
+    }
+
+    Logger.info(s"Trying to create an account for ${userInfo.NINO}")
     httpProxy.post(url, userInfo, Map(authorisationHeaderKey → authorisationDetails))(
       NSIUserInfo.nsiUserInfoWrites, hc.copy(authorization = None))
       .map { response ⇒
