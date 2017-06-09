@@ -22,7 +22,7 @@ import javax.inject.Singleton
 import com.google.inject.ImplementedBy
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.{Format, JsError, JsSuccess, Json}
+import play.api.libs.json._
 import uk.gov.hmrc.helptosavefrontend.config.WSHttpProxy
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosavefrontend.models.NSIUserInfo
@@ -33,6 +33,9 @@ import uk.gov.hmrc.helptosavefrontend.util._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.github.fge.jsonschema.main.JsonSchemaFactory
 
 @ImplementedBy(classOf[NSIConnectorImpl])
 trait NSIConnector {
@@ -54,7 +57,11 @@ object NSIConnector {
 @Singleton
 class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
-  import Toggles._
+  import TogglesFP._
+  import com.github.fge.jsonschema.core.report.ProcessingReport
+  import com.github.fge.jackson.JsonLoader
+  import com.github.fge.jsonschema.main._
+  import com.fasterxml.jackson.databind.JsonNode
 
   val nsiUrl: String = baseUrl("nsi")
   val nsiUrlEnd: String = getString("microservice.services.nsi.url")
@@ -74,14 +81,88 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   val httpProxy = new WSHttpProxy
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-
-    FEATURE("json-nsi-schema-validation") enabled {
-      println("%%%%%%% HELLO WORLD")
-    } otherwise {
-      println("%%%%%%% GOODBYE WORLD")
+  private def checkOutGoingData(userInfo: NSIUserInfo): Either[ProcessingReport, JsonNode] = {
+    val json = JsonLoader.fromString(Json.toJson(userInfo).toString)
+    println("%%%%%%%%%%%%%%%%%%%%%%%% THE JSON " + json)
+    val schemaDef = """{
+                      |    "type": "object",
+                      |    "properties" : {
+                      |	"nino": {
+                      |	    "type": "string",
+                      |	    "pattern": "^(([A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]) ?([0-9]{2}) ?([0-9]{2}) ?([0-9]{2}) ?([A-D]{1})|((XX) ?(99) ?(99) ?(99) ?(X)))$"
+                      |	},
+                      |	"forename": {
+                      |	    "type": "string",
+                      |	    "minLength" : 1,
+                      |	    "maxLength" : 99
+                      |	},
+                      |	"surname": {
+                      |	    "type": "string",
+                      |	    "minLength" : 1,
+                      |	    "maxLength" : 300
+                      |	},
+                      |	"dateOfBirth": {
+                      |	    "type": "string",
+                      |	    "pattern": "^[0-9]{4}[0-9]{2}[0-9]{2}$"
+                      |	},
+                      |	"contactDetails": {
+                      |	    "type": "object",
+                      |	    "properties": {
+                      |		"email": {
+                      |		    "type": "string",
+                      |		    "maxLength": 252,
+                      |		    "pattern" : "^.{1,64}@.{1,254}$"
+                      |		},
+                      |		"phoneNumber": {
+                      |		    "type": "string"
+                      |		},
+                      |		"address": {
+                      |		    "type": "array",
+                      |		    "items": {
+                      |			"type": "string",
+                      |			"maxLength" : 35
+                      |		    },
+                      |		    "minimum": 1,
+                      |		    "maximum": 5
+                      |		},
+                      |		"postCode" : {
+                      |		    "type": "string",
+                      |		    "minimum": 1,
+                      |		    "maximum": 10
+                      |		},
+                      |		"countryCode" : {
+                      |		    "type": "string",
+                      |		    "minimum": 2,
+                      |		    "maximum": 2
+                      |		},
+                      |		"communicationPreference": {
+                      |		    "type": "string",
+                      |		    "enum": ["00", "02"]
+                      |		}
+                      |	    },
+                      |	    "required": ["communicationPreference"],
+                      |	    "additionalProperties": false
+                      |	},
+                      |	"registrationChannel": {
+                      |	    "type": "string",
+                      |	    "enum": ["online", "callCentre"]
+                      |	}
+                      |    },
+                      |    "required": ["nino","forename","surname","dateOfBirth","contactDetails", "registrationChannel"],
+                      |    "additionalProperties": false
+                      |}"""
+    val schema = JsonLoader.fromString(schemaDef)
+    val validator = JsonSchemaFactory.byDefault().getValidator
+    val report = validator.validate(schema, json)
+    if (report.isSuccess) {
+      Right(json)
+    } else {
+      Left(report)
     }
+  }
 
+  private def sendDataToNSI(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] =
+  {
     Logger.info(s"Trying to create an account for ${userInfo.NINO}")
     httpProxy.post(url, userInfo, Map(authorisationHeaderKey → authorisationDetails))(
       NSIUserInfo.nsiUserInfoWrites, hc.copy(authorization = None))
@@ -118,6 +199,18 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
         SubmissionFailure(None, s"Could not read submission failure JSON response: ${response.body}", error.getMessage)
 
     }
+  }
 
+  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
+
+    val result = FEATURE[ProcessingReport, JsonNode]("json-nsi-schema-validation") enabled() thenDo {
+      checkOutGoingData(userInfo)
+    }
+
+    result match {
+      case Right(_) => sendDataToNSI(userInfo)   // Feature configured, json validates
+      case Left(null) => sendDataToNSI(userInfo) // Feature not configured
+      case Left(_) => Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
+    }
   }
 }
