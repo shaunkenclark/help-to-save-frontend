@@ -27,7 +27,7 @@ import scala.concurrent.Future
 
 @Singleton
 class ToggleTestController @Inject()() extends FrontendController {
-  import uk.gov.hmrc.helptosavefrontend.util.TogglesFP._
+  import uk.gov.hmrc.helptosavefrontend.util.Toggles._
   import com.github.fge.jackson.JsonLoader
   import com.github.fge.jsonschema.main._
   import com.fasterxml.jackson.databind.JsonNode

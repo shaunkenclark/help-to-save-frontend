@@ -17,21 +17,25 @@
 package uk.gov.hmrc.helptosavefrontend.util
 
 import uk.gov.hmrc.helptosavefrontend.config.ControllerConfiguration
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import java.time.Instant
 
-object TogglesFP {
-  case class FEATURE[L, R](name: String, default: L = null) {
+import play.api.Play._
+import play.Application
+
+object Toggles {
+  case class FEATURE[L, R](name: String, unconfigured: L = null) {
     val logger = Logger(name)
 
     def enabled(): FEATURE_THEN[L, R] = {
       val cc = ControllerConfiguration
+
       try {
         val enabled = cc.controllerConfigs.getBoolean("toggles." + name + ".enabled")
         logger.info("FEATURE: " + name + " enabled.")
-        FEATURE_THEN[L, R](this.name, logger, default, enabled)
+        FEATURE_THEN[L, R](this.name, logger, unconfigured, enabled)
       } catch {
-        case ex: Exception => FEATURE_THEN(this.name, logger, default, false)
+        case ex: Exception => FEATURE_THEN(this.name, logger, unconfigured, false)
       }
     }
 
@@ -42,16 +46,16 @@ object TogglesFP {
         enabled = cc.controllerConfigs.getBoolean("toggles." + name + ".enabled")
         val v = cc.controllerConfigs.getString("toggles." + name + "." + key)
         logger.info("FEATURE: " + name + " enabled with key " + key + " set to " + v)
-        FEATURE_THEN_KEY[L, R](this.name, this.logger, default, enabled, v, true)
+        FEATURE_THEN_KEY[L, R](this.name, this.logger, unconfigured, enabled, v, true)
       } catch {
-        case ex: Exception => new FEATURE_THEN_KEY[L, R](this.name, this.logger, default, enabled, "", false)
+        case ex: Exception => new FEATURE_THEN_KEY[L, R](this.name, this.logger, unconfigured, enabled, "", false)
       }
     }
   }
 
   object FEATURE
 
-  case class FEATURE_THEN[L, R](name: String, logger: Logger, default: L, isEnabled: Boolean) {
+  case class FEATURE_THEN[L, R](name: String, logger: Logger, unconfigured: L, isEnabled: Boolean) {
     def thenDo(action: => Either[L, R]): Either[L, R] = {
       if (isEnabled) {
         val startTime = Instant.now.toEpochMilli
@@ -60,14 +64,14 @@ object TogglesFP {
         Logger.info("FEATURE: " + name + " executed in " + (endTime - startTime).toString + " milliseconds.")
         result
       } else {
-        Left(default)
+        Left(unconfigured)
       }
     }
   }
 
   object FEATURE_THEN
 
-  case class FEATURE_THEN_KEY[L, R](name: String, logger: Logger, default: L, isEnabled: Boolean, key: String, hasKey: Boolean) {
+  case class FEATURE_THEN_KEY[L, R](name: String, logger: Logger, unconfigured: L, isEnabled: Boolean, key: String, hasKey: Boolean) {
     def thenDo(action: String => Either[L, R]) = {
       if (isEnabled && hasKey) {
         val startTime = Instant.now.toEpochMilli
@@ -76,7 +80,7 @@ object TogglesFP {
         Logger.info("FEATURE: " + name + " executed in " + (endTime - startTime).toString + " milliseconds.")
         Right(result)
       } else {
-        Left(default)
+        Left(unconfigured)
       }
     }
   }

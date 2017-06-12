@@ -57,7 +57,7 @@ object NSIConnector {
 @Singleton
 class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
-  import TogglesFP._
+  import Toggles._
   import com.github.fge.jsonschema.core.report.ProcessingReport
   import com.github.fge.jackson.JsonLoader
   import com.github.fge.jsonschema.main._
@@ -81,7 +81,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   val httpProxy = new WSHttpProxy
 
-  private def checkOutGoingData(userInfo: NSIUserInfo): Either[ProcessingReport, JsonNode] = {
+  private def checkOutGoingData(userInfo: NSIUserInfo): Either[Int, JsonNode] = {
     val json = JsonLoader.fromString(Json.toJson(userInfo).toString)
     println("%%%%%%%%%%%%%%%%%%%%%%%% THE JSON " + json)
     val schemaDef = """{
@@ -157,7 +157,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     if (report.isSuccess) {
       Right(json)
     } else {
-      Left(report)
+      Left(0)
     }
   }
 
@@ -203,13 +203,13 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
 
-    val result = FEATURE[ProcessingReport, JsonNode]("json-nsi-schema-validation") enabled() thenDo {
+    val result = FEATURE[Int, JsonNode]("json-nsi-schema-validation", 0) enabled() thenDo {
       checkOutGoingData(userInfo)
     }
 
     result match {
       case Right(_) => sendDataToNSI(userInfo)   // Feature configured, json validates
-      case Left(null) => sendDataToNSI(userInfo) // Feature not configured
+      case Left(0) => sendDataToNSI(userInfo) // Feature not configured
       case Left(_) => Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
     }
   }
