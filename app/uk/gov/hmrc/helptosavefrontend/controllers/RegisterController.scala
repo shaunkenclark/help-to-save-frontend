@@ -68,9 +68,9 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
   }
 
   def createAccountHelpToSave: Action[AnyContent] = authorisedForHtsWithConfidence {
-    implicit request ⇒
+    implicit request ⇒ {
       val result = for {
-        userInfo    ← retrieveUserInfo()
+        userInfo ← retrieveUserInfo()
         nsiUserInfo ← toNSIUserInfo(userInfo)
         _ ← helpToSaveService.createAccount(nsiUserInfo).leftMap(submissionFailureToString)
       } yield userInfo
@@ -86,6 +86,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
           Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page("Successfully created account"))
         }
       )
+    }
   }
 
   def accessDenied: Action[AnyContent] = Action.async {

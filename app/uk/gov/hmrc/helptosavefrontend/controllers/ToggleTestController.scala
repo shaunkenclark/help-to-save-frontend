@@ -56,12 +56,13 @@ class ToggleTestController @Inject()() extends FrontendController {
       val report = validator.validate(schema, example)
 
       if (report.isSuccess) {
+        println("%%%%%%%%%%%%%%%%%% SCHEMA VALIDATION PASSES")
         Right(example)
       } else {
         Left(report)
       }
     } otherwise {
-      println("%%%%%%%%%%%%%%%%%%%% JSON validation not configured")
+      println("%%%%%%%%%%%%%%%%%%%% JSON VALIDATION NOT CONFIGURED")
     }
 
     Future.successful(Ok)

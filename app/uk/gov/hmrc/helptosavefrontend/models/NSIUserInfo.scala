@@ -139,14 +139,11 @@ object NSIUserInfo {
     case None ⇒
       Invalid(NonEmptyList.of("Postcode undefined"))
 
-    case Some(p) ⇒
-      val trimmedPostcode = p.replaceAllLiterally(" ", "")
-      val lengthCheck =
-        validatedFromBoolean(trimmedPostcode)(_.length <= 10, s"Postcode was longer thn 10 characters: $trimmedPostcode")
-
-      val regexCheck = regexValidation(trimmedPostcode)(postcodeRegex, s"Invalid postcode format: $trimmedPostcode")
-
-      (lengthCheck |@| regexCheck).tupled.map(_ ⇒ trimmedPostcode)
+    case Some(p) ⇒if(p.isEmpty){
+      Invalid(NonEmptyList.of("Empty postcode found"))
+    } else {
+      Valid(p)
+    }
   }
 
   private def countryCodeValidation(countryCode: Option[String]): ValidatedNel[String, Option[String]] =
@@ -287,6 +284,8 @@ object NSIUserInfo {
   private[models] val postcodeRegex =
     ("""^((GIR)(0AA)|([A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]|[A-HK-Y][0-9]([0-9]|[ABEHMNPRV-Y]))|""" +
       """[0-9][A-HJKS-UW]))([0-9][ABD-HJLNP-UW-Z]{2})|(([A-Z]{1,4})(1ZZ))|((BFPO)([0-9]{1,4})))$""").r
+
+  // private[models] val postcodeRegex = ".+".r
 
 }
 

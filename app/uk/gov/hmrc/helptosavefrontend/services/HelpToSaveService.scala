@@ -37,8 +37,9 @@ class HelpToSaveService @Inject()(helpToSaveConnector: HelpToSaveConnector, nSIC
     helpToSaveConnector.getEligibilityStatus(nino, userDetailsURI)
 
 
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,SubmissionFailure,SubmissionSuccess] =
-    EitherT(nSIConnector.createAccount(userInfo).map[Either[SubmissionFailure,SubmissionSuccess]] {
+  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,SubmissionFailure,SubmissionSuccess] = {
+    println("$$$$$$$$$$$$$$$$$$$$$$$ HelpToSaveService createAccount")
+    EitherT(nSIConnector.createAccount(userInfo).map[Either[SubmissionFailure, SubmissionSuccess]] {
       case success: SubmissionSuccess =>
         Logger.info(s"Successfully created an account for ${userInfo.NINO}")
         Right(success)
@@ -46,6 +47,7 @@ class HelpToSaveService @Inject()(helpToSaveConnector: HelpToSaveConnector, nSIC
         Logger.error(s"Could not create an account for ${userInfo.NINO} due to $failure")
         Left(failure)
     })
+  }
 
 }
 

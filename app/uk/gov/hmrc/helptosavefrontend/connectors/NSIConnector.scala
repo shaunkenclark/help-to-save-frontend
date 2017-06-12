@@ -81,9 +81,8 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   val httpProxy = new WSHttpProxy
 
-  private def checkOutGoingData(userInfo: NSIUserInfo): Either[Int, JsonNode] = {
+  private def checkOutGoingData(userInfo: NSIUserInfo): Either[ProcessingReport, JsonNode] = {
     val json = JsonLoader.fromString(Json.toJson(userInfo).toString)
-    println("%%%%%%%%%%%%%%%%%%%%%%%% THE JSON " + json)
     val schemaDef = """{
                       |    "type": "object",
                       |    "properties" : {
@@ -150,14 +149,14 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
                       |    },
                       |    "required": ["nino","forename","surname","dateOfBirth","contactDetails", "registrationChannel"],
                       |    "additionalProperties": false
-                      |}"""
+                      |}""".stripMargin
     val schema = JsonLoader.fromString(schemaDef)
     val validator = JsonSchemaFactory.byDefault().getValidator
     val report = validator.validate(schema, json)
     if (report.isSuccess) {
       Right(json)
     } else {
-      Left(0)
+      Left(report)
     }
   }
 
@@ -202,15 +201,23 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
   }
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-
-    val result = FEATURE[Int, JsonNode]("json-nsi-schema-validation", 0) enabled() thenDo {
+    val result = FEATURE[ProcessingReport, JsonNode]("json-nsi-schema-validation") enabled() thenDo {
       checkOutGoingData(userInfo)
     }
 
     result match {
-      case Right(_) => sendDataToNSI(userInfo)   // Feature configured, json validates
-      case Left(0) => sendDataToNSI(userInfo) // Feature not configured
-      case Left(_) => Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
+      case Right(_) => {
+        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION CONFIGURED - PASSES")
+        sendDataToNSI(userInfo)
+      }
+      case Left(null) => {
+        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION NOT CONFIGURED")
+        sendDataToNSI(userInfo)
+      }
+      case Left(_) => {
+        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION CONFIGURED - DOES NOT PASS")
+        Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
+      }
     }
   }
 }
