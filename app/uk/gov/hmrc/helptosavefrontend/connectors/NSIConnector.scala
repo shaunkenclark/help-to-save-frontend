@@ -163,6 +163,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
   private def sendDataToNSI(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] =
   {
     Logger.info(s"Trying to create an account for ${userInfo.NINO}")
+    println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ CALLING URL " + url)
     httpProxy.post(url, userInfo, Map(authorisationHeaderKey → authorisationDetails))(
       NSIUserInfo.nsiUserInfoWrites, hc.copy(authorization = None))
       .map { response ⇒
@@ -187,14 +188,14 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     Try(response.json) match {
       case Success(jsValue) ⇒
         Json.fromJson[SubmissionFailure](jsValue) match {
-          case JsSuccess(submissionFailure, _) ⇒
+          case JsSuccess(submissionFailure, _) =>
             submissionFailure
 
-          case e: JsError ⇒
+          case e: JsError =>
             SubmissionFailure(None, s"Could not create NSI account errors; response body: ${response.body}", e.prettyPrint())
         }
 
-      case Failure(error) ⇒
+      case Failure(error) =>
         SubmissionFailure(None, s"Could not read submission failure JSON response: ${response.body}", error.getMessage)
 
     }
