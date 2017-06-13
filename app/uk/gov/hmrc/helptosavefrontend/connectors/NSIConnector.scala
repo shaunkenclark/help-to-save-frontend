@@ -67,10 +67,10 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
   val nsiUrlEnd: String = getString("microservice.services.nsi.url")
   val url = s"$nsiUrl/$nsiUrlEnd"
 
-  val authorisationHeaderKey = getString("microservice.services.nsi.authorization.header-key")
+  val authorisationHeaderKey: String = getString("microservice.services.nsi.authorization.header-key")
 
 
-  val authorisationDetails = {
+  val authorisationDetails: String = {
     val user = getString("microservice.services.nsi.authorization.user")
     val password = getString("microservice.services.nsi.authorization.password")
     val encoding = getString("microservice.services.nsi.authorization.encoding")
@@ -163,7 +163,6 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
   private def sendDataToNSI(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] =
   {
     Logger.info(s"Trying to create an account for ${userInfo.NINO}")
-    println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ CALLING URL " + url)
     httpProxy.post(url, userInfo, Map(authorisationHeaderKey → authorisationDetails))(
       NSIUserInfo.nsiUserInfoWrites, hc.copy(authorization = None))
       .map { response ⇒
@@ -207,18 +206,9 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     }
 
     result match {
-      case Right(_) => {
-        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION CONFIGURED - PASSES")
-        sendDataToNSI(userInfo)
-      }
-      case Left(null) => {
-        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION NOT CONFIGURED")
-        sendDataToNSI(userInfo)
-      }
-      case Left(_) => {
-        println("$$$$$$$$$$$$$$$$$$$$$$$$ VALIDATION CONFIGURED - DOES NOT PASS")
-        Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
-      }
+      case Right(_) => sendDataToNSI(userInfo)
+      case Left(null) => sendDataToNSI(userInfo)
+      case Left(_) => Future(SubmissionFailure(None, "Outgoing JSON failed to meet schema: ", result.left.toString))
     }
   }
 }

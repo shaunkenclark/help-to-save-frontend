@@ -12,5 +12,3 @@ GET        /iv/journey-result                       @uk.gov.hmrc.helptosavefront
 GET        /register/access-denied                  @uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.accessDenied
 
 GET        /register/not-eligible                   @uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.notEligible
-
-GET        /toggle                                  @uk.gov.hmrc.helptosavefrontend.controllers.ToggleTestController.tryToggles
