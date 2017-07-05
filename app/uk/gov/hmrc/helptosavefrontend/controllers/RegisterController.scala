@@ -251,7 +251,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     println("&&&&&&&&&&&&&&&&&&& JSON IS " + json)
     if (anError(json)) {
       val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keyWordIs(json, rule.keyword))
-      firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => logClassificationRules.getOrElse(firedRule, Right(Some(userInfo)))}
+      firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => Left(logClassificationRules.getOrElse(firedRule, "").format(userInfo.nino))}
     } else {
       Right(Some(userInfo))
     }
@@ -386,9 +386,9 @@ object RegisterController {
 
     case class LogClassificationRule(instance: String, keyword: String)
 
-    val logClassificationRules = Map[LogClassificationRule, Either[String, Option[NSIUserInfo]]](
-      LogClassificationRule("/forename", "type") -> Left("Forename is wrong type"),
-      LogClassificationRule("/forename", "minLength") -> Left("Forename is too short")
+    val logClassificationRules = Map[LogClassificationRule, String](
+      LogClassificationRule("/forename", "type") -> "For NINO: %s. Forename is wrong type",
+      LogClassificationRule("/forename", "minLength") -> "For NINO: %s. Forename is too short"
     )
     val logClassificationKeys = logClassificationRules.keySet.seq
   }

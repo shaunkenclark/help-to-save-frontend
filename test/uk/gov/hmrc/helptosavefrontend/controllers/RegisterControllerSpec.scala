@@ -304,7 +304,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 2
         register.classify(messages(0), nsiWithShortForename).isLeft shouldBe true
-        register.classify(messages(0), nsiWithShortForename).fold(identity, _ => "") shouldBe "Forename is too short"
+        register.classify(messages(0), nsiWithShortForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename is too short"
       }
 
       "return an error" must {
