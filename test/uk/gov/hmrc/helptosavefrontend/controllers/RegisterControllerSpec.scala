@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.github.fge.jackson.JsonLoader
 import play.api.http.Status
 import play.api.i18n.MessagesApi
-import play.api.libs.json.{JsValue, Reads, Writes}
+import play.api.libs.json.{JsValue, Json, Reads, Writes}
 import play.api.mvc.{Result => PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -42,6 +42,8 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.JSONValidationFeature._
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
+
+import com.github.fge.jsonschema.core.report.ProcessingReport
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -282,6 +284,26 @@ class RegisterControllerSpec extends TestSupport {
         val tomorrow = today.plus(1, java.time.temporal.ChronoUnit.DAYS)
         val futureUser = validNSIUserInfo copy (dateOfBirth = tomorrow)
         register.futureDate(futureUser).isLeft shouldBe true
+      }
+
+      "when given a NSIUserInfo that meets the json validation schema, return a classification of NoLogError" in {
+        import scala.collection.JavaConversions._
+
+        val userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        report.iterator().toSeq.length shouldBe 0
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the forename is too short, return a classification of ForenameTooShort" in {
+        import scala.collection.JavaConversions._
+        import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController._
+
+        val nsiWithShortForename = validNSIUserInfo copy (forename = "")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithShortForename).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0)) shouldBe ForenameTooShort
       }
 
       "return an error" must {

@@ -27,7 +27,7 @@ import cats.syntax.either._
 import cats.syntax.traverse._
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.core.report.ProcessingReport
+import com.github.fge.jsonschema.core.report.{ProcessingReport, ProcessingMessage}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import com.google.inject.Inject
 import configs.syntax._
@@ -119,10 +119,10 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
       case Some(ui) =>
         FEATURE("outgoing-json-validation", conf, featureLogger) thenOrElse(
           _ => for {
-              t0 <- validateUserInfoAgainstSchema(ui, validationSchema)
-              t1 <- before1800(ui)
-              t2 <- futureDate(ui)
-            } yield t2,
+            t0 <- validateUserInfoAgainstSchema(ui, validationSchema)
+            t1 <- before1800(ui)
+            t2 <- futureDate(ui)
+          } yield t2,
           //_ => validateUserInfoAgainstSchema(ui, validationSchema),
           _ => Right(userInfo))
     }
@@ -240,12 +240,44 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
       }
     }
 
+  case class LogClassificationRule(instance: String, keyword: String)
+
+  val logClassificationRules = Map[LogClassificationRule, ErrorLogClassification](
+    LogClassificationRule("/forename", "type") -> ForenameWrongType,
+    LogClassificationRule("/forename", "minLength") -> ForenameTooShort
+  )
+  val logClassificationKeys = logClassificationRules.keySet.seq
+
+  private def anError(json: JsonNode) = json.path("level").asText() == "error"
+
+  private def instanceIs(json: JsonNode, s: String): Boolean = json.path("instance").path("pointer").asText() == s
+
+  private def keyWordIs(json: JsonNode, s: String): Boolean = json.path("keyword").asText() == s
+
+  private[controllers] def classify(message: ProcessingMessage): ErrorLogClassification = {
+    implicit val json: JsonNode = message.asJson()
+    println("&&&&&&&&&&&&&&&&&&& JSON IS " + json)
+    if (anError(json)) {
+      val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keyWordIs(json, rule.keyword))
+      firingRule.fold(NoErrorLog: ErrorLogClassification) {firedRule => logClassificationRules.getOrElse(firedRule, NoErrorLog)}
+    } else {
+      NoErrorLog
+    }
+  }
+
   private[controllers] def validateUserInfoAgainstSchema(userInfo: NSIUserInfo, schema: JsonNode): Either[String, Option[NSIUserInfo]] = {
+    import scala.collection.JavaConversions._
 
     val userInfoJson = JsonLoader.fromString(Json.toJson(userInfo).toString)
     try {
       val report: ProcessingReport = jsonValidator.validate(schema, userInfoJson)
-      if (report.isSuccess) Right(Some(userInfo)) else Left(report.toString)
+      val classification: Option[ErrorLogClassification] = report.iterator().toIterable.map(msg => classify(msg)).find(_ != NoErrorLog)
+
+      classification.fold(Right(Some(userInfo)):Either[String, Option[NSIUserInfo]]) {
+        case NoErrorLog => Right(Some(userInfo))
+        case ForenameWrongType => Left("Forename has wrong type")
+        case ForenameTooShort => Left("Forename is too short")
+      }
     } catch {
       case e: Exception => Left(e.getMessage)
     }
@@ -364,6 +396,11 @@ object RegisterController {
     lazy val validationSchema = JsonLoader.fromString(validationSchemaStr)
     lazy val featureLogger = Logger("outgoing-json-validation")
     lazy val jsonValidator: JsonValidator = JsonSchemaFactory.byDefault().getValidator
+
+    sealed trait ErrorLogClassification
+    object NoErrorLog extends ErrorLogClassification
+    object ForenameWrongType extends ErrorLogClassification
+    object ForenameTooShort extends ErrorLogClassification
   }
 
   // details required to get an authorisation token from OAuth
