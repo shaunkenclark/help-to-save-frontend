@@ -244,13 +244,15 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
 
   private def instanceIs(json: JsonNode, s: String): Boolean = json.path("instance").path("pointer").asText() == s
 
-  private def keyWordIs(json: JsonNode, s: String): Boolean = json.path("keyword").asText() == s
+  private def keywordIs(json: JsonNode, s: String): Boolean = json.path("keyword").asText() == s
+
+  private def messageContains(json: JsonNode, s: Option[String]): Boolean = s.fold(true) {contents => json.path("message").asText().contains(contents)}
 
   def classify(message: ProcessingMessage, userInfo: NSIUserInfo): Either[String, Option[NSIUserInfo]] = {
     val json: JsonNode = message.asJson()
     println("&&&&&&&&&&&&&&&&&&& JSON IS " + json)
     if (anError(json)) {
-      val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keyWordIs(json, rule.keyword))
+      val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keywordIs(json, rule.keyword) && messageContains(json, rule.messageContains))
       firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => Left(logClassificationRules.getOrElse(firedRule, "").format(userInfo.nino))}
     } else {
       Right(Some(userInfo))
@@ -384,11 +386,23 @@ object RegisterController {
     lazy val featureLogger = Logger("outgoing-json-validation")
     lazy val jsonValidator: JsonValidator = JsonSchemaFactory.byDefault().getValidator
 
-    case class LogClassificationRule(instance: String, keyword: String)
+    case class LogClassificationRule(instance: String, keyword: String, messageContains: Option[String])
+
+    object LogClassificationRule {
+      def apply(instance: String, keyword: String): LogClassificationRule = LogClassificationRule(instance, keyword, None)
+      def apply(instance: String, keyword: String, contains: String): LogClassificationRule = LogClassificationRule(instance, keyword, Some(contains))
+    }
 
     val logClassificationRules = Map[LogClassificationRule, String](
       LogClassificationRule("/forename", "type") -> "For NINO: %s. Forename is wrong type",
-      LogClassificationRule("/forename", "minLength") -> "For NINO: %s. Forename is too short"
+      LogClassificationRule("/forename", "minLength") -> "For NINO: %s. Forename is too short",
+      LogClassificationRule("/forename", "maxLength") -> "For NINO: %s. Forename is too long (> 26)",
+      LogClassificationRule("/forename", "pattern") -> "For NINO: %s. Forename does not meet validation regex",
+      LogClassificationRule("", "required", "forename") -> "For NINO: %s. Forename is missing",
+      LogClassificationRule("/surname", "minLength") -> "For NINO: %s. Surname is too short",
+      LogClassificationRule("/surname", "maxLength") -> "For NINO: %s. Surname is too long (> 300)",
+      LogClassificationRule("/surname", "pattern") -> "For NINO: %s. Surname does not meet validation regex",
+      LogClassificationRule("", "required", "surname") -> "For NINO: %s. Surname is missing"
     )
     val logClassificationKeys = logClassificationRules.keySet.seq
   }

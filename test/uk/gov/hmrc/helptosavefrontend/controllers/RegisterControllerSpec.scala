@@ -43,6 +43,7 @@ import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.JSONValidat
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.github.fge.jsonschema.core.report.ProcessingReport
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -294,9 +295,8 @@ class RegisterControllerSpec extends TestSupport {
         report.iterator().toSeq.length shouldBe 0
       }
 
-      "when given a NSIUserInfo that the json validation schema reports that the forename is too short, return a classification of ForenameTooShort" in {
+      "when given a NSIUserInfo that the json validation schema reports that the forename is too short, return a message" in {
         import scala.collection.JavaConversions._
-        import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController._
 
         val nsiWithShortForename = validNSIUserInfo copy (forename = "")
         val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithShortForename).toString)
@@ -305,6 +305,90 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 2
         register.classify(messages(0), nsiWithShortForename).isLeft shouldBe true
         register.classify(messages(0), nsiWithShortForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the forename is too long, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithLongForename = validNSIUserInfo copy (forename = "A" * 27)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithLongForename).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithLongForename).isLeft shouldBe true
+        register.classify(messages(0), nsiWithLongForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename is too long (> 26)"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the forename is too does not meet the regex pattern, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadForename = validNSIUserInfo copy (forename = "    --wibble--wobble")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadForename).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadForename).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename does not meet validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the forename is missing" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].remove("forename")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename is missing"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the surname is too short, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithShortSurname = validNSIUserInfo copy (surname = "")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithShortSurname).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithShortSurname).isLeft shouldBe true
+        register.classify(messages(0), nsiWithShortSurname).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the surname is too long, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithLongSurname = validNSIUserInfo copy (surname = "A" * 301)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithLongSurname).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithLongSurname).isLeft shouldBe true
+        register.classify(messages(0), nsiWithLongSurname).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname is too long (> 300)"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the surname is too does not meet the regex pattern, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadSurname = validNSIUserInfo copy (surname = "    --wibble--wobble")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadSurname).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadSurname).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadSurname).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname does not meet validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the surname is missing" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].remove("surname")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname is missing"
       }
 
       "return an error" must {
