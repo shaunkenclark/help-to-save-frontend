@@ -240,28 +240,20 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
       }
     }
 
-  case class LogClassificationRule(instance: String, keyword: String)
-
-  val logClassificationRules = Map[LogClassificationRule, ErrorLogClassification](
-    LogClassificationRule("/forename", "type") -> ForenameWrongType,
-    LogClassificationRule("/forename", "minLength") -> ForenameTooShort
-  )
-  val logClassificationKeys = logClassificationRules.keySet.seq
-
   private def anError(json: JsonNode) = json.path("level").asText() == "error"
 
   private def instanceIs(json: JsonNode, s: String): Boolean = json.path("instance").path("pointer").asText() == s
 
   private def keyWordIs(json: JsonNode, s: String): Boolean = json.path("keyword").asText() == s
 
-  private[controllers] def classify(message: ProcessingMessage): ErrorLogClassification = {
-    implicit val json: JsonNode = message.asJson()
+  def classify(message: ProcessingMessage, userInfo: NSIUserInfo): Either[String, Option[NSIUserInfo]] = {
+    val json: JsonNode = message.asJson()
     println("&&&&&&&&&&&&&&&&&&& JSON IS " + json)
     if (anError(json)) {
       val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keyWordIs(json, rule.keyword))
-      firingRule.fold(NoErrorLog: ErrorLogClassification) {firedRule => logClassificationRules.getOrElse(firedRule, NoErrorLog)}
+      firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => logClassificationRules.getOrElse(firedRule, Right(Some(userInfo)))}
     } else {
-      NoErrorLog
+      Right(Some(userInfo))
     }
   }
 
@@ -271,13 +263,8 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     val userInfoJson = JsonLoader.fromString(Json.toJson(userInfo).toString)
     try {
       val report: ProcessingReport = jsonValidator.validate(schema, userInfoJson)
-      val classification: Option[ErrorLogClassification] = report.iterator().toIterable.map(msg => classify(msg)).find(_ != NoErrorLog)
-
-      classification.fold(Right(Some(userInfo)):Either[String, Option[NSIUserInfo]]) {
-        case NoErrorLog => Right(Some(userInfo))
-        case ForenameWrongType => Left("Forename has wrong type")
-        case ForenameTooShort => Left("Forename is too short")
-      }
+      val classification = report.iterator().toIterable.map(msg => classify(msg, userInfo)).find(_.isLeft)
+      classification.fold(Right(Some(userInfo)):Either[String, Option[NSIUserInfo]]){identity}
     } catch {
       case e: Exception => Left(e.getMessage)
     }
@@ -397,10 +384,13 @@ object RegisterController {
     lazy val featureLogger = Logger("outgoing-json-validation")
     lazy val jsonValidator: JsonValidator = JsonSchemaFactory.byDefault().getValidator
 
-    sealed trait ErrorLogClassification
-    object NoErrorLog extends ErrorLogClassification
-    object ForenameWrongType extends ErrorLogClassification
-    object ForenameTooShort extends ErrorLogClassification
+    case class LogClassificationRule(instance: String, keyword: String)
+
+    val logClassificationRules = Map[LogClassificationRule, Either[String, Option[NSIUserInfo]]](
+      LogClassificationRule("/forename", "type") -> Left("Forename is wrong type"),
+      LogClassificationRule("/forename", "minLength") -> Left("Forename is too short")
+    )
+    val logClassificationKeys = logClassificationRules.keySet.seq
   }
 
   // details required to get an authorisation token from OAuth

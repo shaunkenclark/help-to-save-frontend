@@ -286,7 +286,7 @@ class RegisterControllerSpec extends TestSupport {
         register.futureDate(futureUser).isLeft shouldBe true
       }
 
-      "when given a NSIUserInfo that meets the json validation schema, return a classification of NoLogError" in {
+      "when given a NSIUserInfo that meets the json validation schema, return a zero length report" in {
         import scala.collection.JavaConversions._
 
         val userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
@@ -303,7 +303,8 @@ class RegisterControllerSpec extends TestSupport {
         val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
         val messages = report.iterator().toSeq
         messages.length shouldBe 2
-        register.classify(messages(0)) shouldBe ForenameTooShort
+        register.classify(messages(0), nsiWithShortForename).isLeft shouldBe true
+        register.classify(messages(0), nsiWithShortForename).fold(identity, _ => "") shouldBe "Forename is too short"
       }
 
       "return an error" must {
