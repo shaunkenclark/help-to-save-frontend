@@ -391,6 +391,92 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname is missing"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is too short, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("dateOfBirth", "1800525")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is too long, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("dateOfBirth", "180000525")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth does not meet the regex, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("dateOfBirth", "18oo0525")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth does not meet validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].remove("dateOfBirth")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth is missing"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the country code is too short, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithShortCountryCode = nsiValidContactDetails copy (countryCode = Some("G"))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithShortCountryCode)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the country code is too long, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongCountryCode = nsiValidContactDetails copy (countryCode = Some("GRG"))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongCountryCode)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the country code is too does not meet the regex, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongCountryCode = nsiValidContactDetails copy (countryCode = Some("--"))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongCountryCode)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code does not meet the validation regex"
+      }
       "return an error" must {
 
         def isError(result: Future[PlayResult]): Boolean =
