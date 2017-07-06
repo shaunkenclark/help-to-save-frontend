@@ -394,22 +394,26 @@ object RegisterController {
     }
 
     val logClassificationRules = Map[LogClassificationRule, String](
-      LogClassificationRule("/forename", "type") -> "For NINO: %s. Forename is wrong type",
-      LogClassificationRule("/forename", "minLength") -> "For NINO: %s. Forename is too short",
-      LogClassificationRule("/forename", "maxLength") -> "For NINO: %s. Forename is too long (> 26)",
-      LogClassificationRule("/forename", "pattern") -> "For NINO: %s. Forename does not meet validation regex",
-      LogClassificationRule("", "required", "forename") -> "For NINO: %s. Forename is missing",
-      LogClassificationRule("/surname", "minLength") -> "For NINO: %s. Surname is too short",
-      LogClassificationRule("/surname", "maxLength") -> "For NINO: %s. Surname is too long (> 300)",
-      LogClassificationRule("/surname", "pattern") -> "For NINO: %s. Surname does not meet validation regex",
-      LogClassificationRule("", "required", "surname") -> "For NINO: %s. Surname is missing",
-      LogClassificationRule("/dateOfBirth", "minLength") -> "For NINO: %s. Date of birth is too short",
-      LogClassificationRule("/dateOfBirth", "maxLength") -> "For NINO: %s. Date of birth is too long",
-      LogClassificationRule("/dateOfBirth", "pattern") -> "For NINO: %s. Date of birth does not meet validation regex",
-      LogClassificationRule("", "required", "dateOfBirth") -> "For NINO: %s. Date of birth is missing",
+      LogClassificationRule("/forename", "type") ->                        "For NINO: %s. Forename is wrong type",
+      LogClassificationRule("/forename", "minLength") ->                   "For NINO: %s. Forename is too short",
+      LogClassificationRule("/forename", "maxLength") ->                   "For NINO: %s. Forename is too long (> 26)",
+      LogClassificationRule("/forename", "pattern") ->                     "For NINO: %s. Forename does not meet validation regex",
+      LogClassificationRule("", "required", "forename") ->                 "For NINO: %s. Forename is missing",
+      LogClassificationRule("/surname", "minLength") ->                    "For NINO: %s. Surname is too short",
+      LogClassificationRule("/surname", "maxLength") ->                    "For NINO: %s. Surname is too long (> 300)",
+      LogClassificationRule("/surname", "pattern") ->                      "For NINO: %s. Surname does not meet validation regex",
+      LogClassificationRule("", "required", "surname") ->                  "For NINO: %s. Surname is missing",
+      LogClassificationRule("/dateOfBirth", "minLength") ->                "For NINO: %s. Date of birth is too short",
+      LogClassificationRule("/dateOfBirth", "maxLength") ->                "For NINO: %s. Date of birth is too long",
+      LogClassificationRule("/dateOfBirth", "pattern") ->                  "For NINO: %s. Date of birth does not meet validation regex",
+      LogClassificationRule("", "required", "dateOfBirth") ->              "For NINO: %s. Date of birth is missing",
       LogClassificationRule("/contactDetails/countryCode", "minLength") -> "For NINO: %s. Country code is too short",
       LogClassificationRule("/contactDetails/countryCode", "maxLength") -> "For NINO: %s. Country code is too long",
-      LogClassificationRule("/contactDetails/countryCode", "pattern") -> "For NINO: %s. Country code does not meet the validation regex"
+      LogClassificationRule("/contactDetails/countryCode", "pattern") ->   "For NINO: %s. Country code does not meet the validation regex",
+      LogClassificationRule("/contactDetails/address1", "maxLength") ->    "For NINO: %s. Address1 field is too long",
+      LogClassificationRule("/contactDetails", "required", "address1") ->  "For NINO: %s. Address1 field is missing",
+      LogClassificationRule("/contactDetails/address2", "maxLength") ->    "For NINO: %s. Address2 field is too long",
+      LogClassificationRule("/contactDetails", "required", "address2") ->  "For NINO: %s. Address2 field is missing"
     )
     val logClassificationKeys = logClassificationRules.keySet.seq
   }

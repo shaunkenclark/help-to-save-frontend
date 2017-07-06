@@ -465,7 +465,7 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code is too long"
       }
 
-      "when given a NSIUserInfo that the json validation schema reports that the country code is too does not meet the regex, return a message" in {
+      "when given a NSIUserInfo that the json validation schema reports that the country code does not meet the regex, return a message" in {
         import scala.collection.JavaConversions._
 
         val contactDetailsWithLongCountryCode = nsiValidContactDetails copy (countryCode = Some("--"))
@@ -477,6 +477,57 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code does not meet the validation regex"
       }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address1 field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongAddress1 = nsiValidContactDetails copy (address1 = "A" * 36)
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongAddress1)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address1 field is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address1 field is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].remove("address1")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address1 field is missing"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address2 field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongAddress2 = nsiValidContactDetails copy (address2 = "A" * 36)
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongAddress2)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address2 field is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address2 field is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].remove("address2")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address2 field is missing"
+      }
+
       "return an error" must {
 
         def isError(result: Future[PlayResult]): Boolean =
