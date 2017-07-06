@@ -328,7 +328,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadForename).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename does not meet validation regex"
+        register.classify(messages(0), nsiWithBadForename).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This forename contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the forename is missing" in {
@@ -376,7 +376,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadSurname).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadSurname).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname does not meet validation regex"
+        register.classify(messages(0), nsiWithBadSurname).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This surname contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the surname is missing" in {
@@ -424,7 +424,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth does not meet validation regex"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This date of birth contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is missing, return a message" in {
@@ -475,7 +475,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Country code does not meet the validation regex"
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This country code contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the address1 field is too long" in {
@@ -628,7 +628,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference does not meet the validation regex"
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This communications preference contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is missing, return a message" in {
@@ -691,7 +691,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadRegistrationChannel).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadRegistrationChannel).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel does not meet the validation regex"
+        register.classify(messages(0), nsiWithBadRegistrationChannel).fold(identity, _ => "") shouldBe "For NINO: WM123456C. This registration channel contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the registration channel is missing, return a message" in {
@@ -739,7 +739,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadNino).isLeft shouldBe true
-        register.classify(messages(0), nsiWithBadNino).fold(identity, _ => "") shouldBe "For NINO: WMAA3456C. Nino does not meet the validation regex"
+        register.classify(messages(0), nsiWithBadNino).fold(identity, _ => "") shouldBe "For NINO: WMAA3456C. This NINO contained an unrecognised char sequence"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the nino is missing, return a message" in {
