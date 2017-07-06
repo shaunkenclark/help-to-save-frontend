@@ -340,7 +340,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Forename was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the surname is too short, return a message" in {
@@ -388,7 +388,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Surname was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is too short, return a message" in {
@@ -436,7 +436,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Date of birth was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the country code is too short, return a message" in {
@@ -500,7 +500,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address1 field is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address1 field was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the address2 field is too long" in {
@@ -525,7 +525,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address2 field is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address2 field was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the address3 field is too long" in {
@@ -589,7 +589,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Postcode is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Postcode was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is too short" in {
@@ -640,7 +640,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference was mandatory but not supplied"
       }
 
 
@@ -703,7 +703,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel was mandatory but not supplied"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the nino is too short" in {
@@ -751,7 +751,7 @@ class RegisterControllerSpec extends TestSupport {
         val messages = report.iterator().toSeq
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
-        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "Nino is missing"
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "Nino was mandatory but not supplied"
       }
 
 
