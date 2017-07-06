@@ -528,6 +528,233 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address2 field is missing"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the address3 field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongAddress3 = nsiValidContactDetails copy (address3 = Some("A" * 36))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongAddress3)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address3 field is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address4 field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongAddress4 = nsiValidContactDetails copy (address3 = Some("A" * 35), address4 = Some("A" * 36))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongAddress4)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address4 field is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address5 field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithLongAddress5 = nsiValidContactDetails copy (address3 = Some("A" * 35), address4 = Some("A" * 35), address5 = Some("A" * 36))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithLongAddress5)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Address5 field is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the postcode field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadPostcode = nsiValidContactDetails copy (postcode = "P" * 11)
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadPostcode)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Postcode is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the postcode is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].remove("postcode")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Postcode is missing"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is too short" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadCommsPref = nsiValidContactDetails copy (communicationPreference = "")
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadCommsPref)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadCommsPref = nsiValidContactDetails copy (communicationPreference = "AAA")
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadCommsPref)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field does not meet regex" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadCommsPref = nsiValidContactDetails copy (communicationPreference = "01")
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadCommsPref)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference does not meet the validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].remove("communicationPreference")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Communications preference is missing"
+      }
+
+
+      "when given a NSIUserInfo that the json validation schema reports that the phone number is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadPhoneNumber = nsiValidContactDetails copy (phoneNumber = Some("A" * 16))
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadPhoneNumber)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Phone number is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the email address is too long" in {
+        import scala.collection.JavaConversions._
+
+        val contactDetailsWithBadEmail = nsiValidContactDetails copy (email = "A" * 63 + "@" + "A" * 251)
+        val nsiWithBadContactDetails = validNSIUserInfo copy (contactDetails = contactDetailsWithBadEmail)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadContactDetails).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Email address is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the registration channel is too long" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadRegistrationChannel = validNSIUserInfo copy (registrationChannel = "A" * 11)
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadRegistrationChannel).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadRegistrationChannel).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadRegistrationChannel).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the registration channel does not meet regex, return a message" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadRegistrationChannel = validNSIUserInfo copy (registrationChannel = "offline")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadRegistrationChannel).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadRegistrationChannel).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadRegistrationChannel).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel does not meet the validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the registration channel is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].remove("registrationChannel")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO: WM123456C. Registration channel is missing"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the nino is too short" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadNino = validNSIUserInfo copy (nino = "WM23456C")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadNino).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadNino).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadNino).fold(identity, _ => "") shouldBe "For NINO: WM23456C. Nino is too short"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the nino is too long" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadNino = validNSIUserInfo copy (nino = "WM1234567C")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadNino).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 2
+        register.classify(messages(0), nsiWithBadNino).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadNino).fold(identity, _ => "") shouldBe "For NINO: WM1234567C. Nino is too long"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the nino does not meet the validation regex" in {
+        import scala.collection.JavaConversions._
+
+        val nsiWithBadNino = validNSIUserInfo copy (nino = "WMAA3456C")
+        val userInfoJson = JsonLoader.fromString(Json.toJson(nsiWithBadNino).toString)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), nsiWithBadNino).isLeft shouldBe true
+        register.classify(messages(0), nsiWithBadNino).fold(identity, _ => "") shouldBe "For NINO: WMAA3456C. Nino does not meet the validation regex"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the nino is missing, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].remove("nino")
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "Nino is missing"
+      }
+
+
       "return an error" must {
 
         def isError(result: Future[PlayResult]): Boolean =

@@ -413,7 +413,27 @@ object RegisterController {
       LogClassificationRule("/contactDetails/address1", "maxLength") ->    "For NINO: %s. Address1 field is too long",
       LogClassificationRule("/contactDetails", "required", "address1") ->  "For NINO: %s. Address1 field is missing",
       LogClassificationRule("/contactDetails/address2", "maxLength") ->    "For NINO: %s. Address2 field is too long",
-      LogClassificationRule("/contactDetails", "required", "address2") ->  "For NINO: %s. Address2 field is missing"
+      LogClassificationRule("/contactDetails", "required", "address2") ->  "For NINO: %s. Address2 field is missing",
+      LogClassificationRule("/contactDetails/address3", "maxLength") ->    "For NINO: %s. Address3 field is too long",
+      LogClassificationRule("/contactDetails/address4", "maxLength") ->    "For NINO: %s. Address4 field is too long",
+      LogClassificationRule("/contactDetails/address5", "maxLength") ->    "For NINO: %s. Address5 field is too long",
+      LogClassificationRule("/contactDetails/postcode", "maxLength") ->    "For NINO: %s. Postcode is too long",
+      LogClassificationRule("/contactDetails", "required", "postcode") ->  "For NINO: %s. Postcode is missing",
+      LogClassificationRule("/contactDetails/communicationPreference", "minLength") ->   "For NINO: %s. Communications preference is too short",
+      LogClassificationRule("/contactDetails/communicationPreference", "maxLength") ->   "For NINO: %s. Communications preference is too long",
+      LogClassificationRule("/contactDetails/communicationPreference", "pattern") ->     "For NINO: %s. Communications preference does not meet the validation regex",
+      LogClassificationRule("/contactDetails", "required", "communicationPreference") -> "For NINO: %s. Communications preference is missing",
+      LogClassificationRule("/contactDetails/phoneNumber", "maxLength") -> "For NINO: %s. Phone number is too long",
+      LogClassificationRule("/contactDetails/email", "maxLength") ->       "For NINO: %s. Email address is too long",
+      LogClassificationRule("/registrationChannel", "maxLength") ->        "For NINO: %s. Registration channel is too long",
+      LogClassificationRule("/registrationChannel", "pattern") ->          "For NINO: %s. Registration channel does not meet the validation regex",
+      LogClassificationRule("", "required", "registrationChannel") ->      "For NINO: %s. Registration channel is missing",
+      LogClassificationRule("/nino", "minLength") ->                       "For NINO: %s. Nino is too short",
+      LogClassificationRule("/nino", "maxLength") ->                       "For NINO: %s. Nino is too long",
+      LogClassificationRule("/nino", "pattern") ->                         "For NINO: %s. Nino does not meet the validation regex",
+      LogClassificationRule("", "required", "nino") ->                     "Nino is missing"
+
+
     )
     val logClassificationKeys = logClassificationRules.keySet.seq
   }
