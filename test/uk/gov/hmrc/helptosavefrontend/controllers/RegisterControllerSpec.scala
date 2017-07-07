@@ -295,6 +295,18 @@ class RegisterControllerSpec extends TestSupport {
         report.iterator().toSeq.length shouldBe 0
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the forename is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("forename", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: forename is wrong type, needs to be a string"
+      }
+
       "when given a NSIUserInfo that the json validation schema reports that the forename is too short, return a message" in {
         import scala.collection.JavaConversions._
 
@@ -341,6 +353,18 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: forename was mandatory but not supplied"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the surname is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("surname", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: surname is wrong type, needs to be a string"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the surname is too short, return a message" in {
@@ -391,6 +415,18 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: surname was mandatory but not supplied"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the date of birth is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.asInstanceOf[ObjectNode].put("dateOfBirth", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: date of birth is wrong type, needs to be a string"
+      }
+
       "when given a NSIUserInfo that the json validation schema reports that the dateOfBirth is too short, return a message" in {
         import scala.collection.JavaConversions._
 
@@ -439,6 +475,18 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: date of birth was mandatory but not supplied"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the country code is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("countryCode", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: country code is wrong type, needs to be a string"
+      }
+
       "when given a NSIUserInfo that the json validation schema reports that the country code is too short, return a message" in {
         import scala.collection.JavaConversions._
 
@@ -478,6 +526,18 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO WM123456C: country code contained an unrecognised char sequence"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the address1 field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("address1", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address1 field is wrong type, needs to be a string"
+      }
+
       "when given a NSIUserInfo that the json validation schema reports that the address1 field is too long" in {
         import scala.collection.JavaConversions._
 
@@ -501,6 +561,18 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address1 field was mandatory but not supplied"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address2 field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("address2", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address2 field is wrong type, needs to be a string"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the address2 field is too long" in {
@@ -528,6 +600,19 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address2 field was mandatory but not supplied"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the address3 field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("address3", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address3 field is wrong type, needs to be a string"
+      }
+
+
       "when given a NSIUserInfo that the json validation schema reports that the address3 field is too long" in {
         import scala.collection.JavaConversions._
 
@@ -539,6 +624,18 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO WM123456C: address3 field is greater than 35 chars"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the address4 field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("address4", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address4 field is wrong type, needs to be a string"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the address4 field is too long" in {
@@ -554,6 +651,18 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO WM123456C: address4 field is greater than 35 chars"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the address5 field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("address5", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: address5 field is wrong type, needs to be a string"
+      }
+
       "when given a NSIUserInfo that the json validation schema reports that the address5 field is too long" in {
         import scala.collection.JavaConversions._
 
@@ -565,6 +674,18 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 1
         register.classify(messages(0), nsiWithBadContactDetails).isLeft shouldBe true
         register.classify(messages(0), nsiWithBadContactDetails).fold(identity, _ => "") shouldBe "For NINO WM123456C: address5 field is greater than 35 chars"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the postcode field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("postcode", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: postcode field is wrong type, needs to be a string"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the postcode field is too long" in {
@@ -590,6 +711,18 @@ class RegisterControllerSpec extends TestSupport {
         messages.length shouldBe 1
         register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: postcode was mandatory but not supplied"
+      }
+
+      "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("communicationPreference", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: communication preference field is wrong type, needs to be a string"
       }
 
       "when given a NSIUserInfo that the json validation schema reports that the communicationPreference field is too short" in {
