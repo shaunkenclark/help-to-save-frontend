@@ -118,13 +118,12 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
       case None => Right(None)
       case Some(ui) =>
         FEATURE("outgoing-json-validation", conf, featureLogger) thenOrElse(
-          _ => for {
+          for {
             t0 <- validateUserInfoAgainstSchema(ui, validationSchema)
             t1 <- before1800(ui)
             t2 <- futureDate(ui)
           } yield t2,
-          //_ => validateUserInfoAgainstSchema(ui, validationSchema),
-          _ => Right(userInfo))
+          Right(userInfo))
     }
   }
 
@@ -246,13 +245,13 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
 
   private def keywordIs(json: JsonNode, s: String): Boolean = json.path("keyword").asText() == s
 
-  private def messageContains(json: JsonNode, s: Option[String]): Boolean = s.fold(true) {contents => json.path("message").asText().contains(contents)}
+  private def messageContains(json: JsonNode, s: Option[String]): Boolean = s.fold(true) { contents => json.path("message").asText().contains(contents) }
 
   def classify(message: ProcessingMessage, userInfo: NSIUserInfo): Either[String, Option[NSIUserInfo]] = {
     val json: JsonNode = message.asJson()
     if (anError(json)) {
       val firingRule = logClassificationKeys.find(rule => instanceIs(json, rule.instance) && keywordIs(json, rule.keyword) && messageContains(json, rule.messageContains))
-      firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => Left(logClassificationRules.getOrElse(firedRule, "").format(userInfo.nino))}
+      firingRule.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) { firedRule => Left(logClassificationRules.getOrElse(firedRule, "").format(userInfo.nino)) }
     } else {
       Right(Some(userInfo))
     }
@@ -265,7 +264,9 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     try {
       val report: ProcessingReport = jsonValidator.validate(schema, userInfoJson)
       val classification = report.iterator().toIterable.map(msg => classify(msg, userInfo)).find(_.isLeft)
-      classification.fold(Right(Some(userInfo)):Either[String, Option[NSIUserInfo]]){identity}
+      classification.fold(Right(Some(userInfo)): Either[String, Option[NSIUserInfo]]) {
+        identity
+      }
     } catch {
       case e: Exception => Left(e.getMessage)
     }
@@ -389,48 +390,49 @@ object RegisterController {
 
     object LogClassificationRule {
       def apply(instance: String, keyword: String): LogClassificationRule = LogClassificationRule(instance, keyword, None)
+
       def apply(instance: String, keyword: String, contains: String): LogClassificationRule = LogClassificationRule(instance, keyword, Some(contains))
     }
 
     val logClassificationRules = Map[LogClassificationRule, String](
-      LogClassificationRule("/forename", "type") ->                        "For NINO %s: forename is wrong type",
-      LogClassificationRule("/forename", "minLength") ->                   "For NINO %s: forename is less than 1 char, needs to be at least 1 char",
-      LogClassificationRule("/forename", "maxLength") ->                   "For NINO %s: forename is greater than 26 chars",
-      LogClassificationRule("/forename", "pattern") ->                     "For NINO %s: forename contained an unrecognised char sequence",
-      LogClassificationRule("", "required", "forename") ->                 "For NINO %s: forename was mandatory but not supplied",
-      LogClassificationRule("/surname", "minLength") ->                    "For NINO %s: surname is less than 1 char, needs to be at least 1 char",
-      LogClassificationRule("/surname", "maxLength") ->                    "For NINO %s: surname is greater than 300 chars",
-      LogClassificationRule("/surname", "pattern") ->                      "For NINO %s: surname contained an unrecognised char sequence",
-      LogClassificationRule("", "required", "surname") ->                  "For NINO %s: surname was mandatory but not supplied",
-      LogClassificationRule("/dateOfBirth", "minLength") ->                "For NINO %s: date of birth is less than 8 chars, needs to be 8 chars",
-      LogClassificationRule("/dateOfBirth", "maxLength") ->                "For NINO %s: date of birth is greater than 8 chars, needs to be 8 chars",
-      LogClassificationRule("/dateOfBirth", "pattern") ->                  "For NINO %s: date of birth contained an unrecognised char sequence",
-      LogClassificationRule("", "required", "dateOfBirth") ->              "For NINO %s: date of birth was mandatory but not supplied",
+      LogClassificationRule("/forename", "type") -> "For NINO %s: forename is wrong type",
+      LogClassificationRule("/forename", "minLength") -> "For NINO %s: forename is less than 1 char, needs to be at least 1 char",
+      LogClassificationRule("/forename", "maxLength") -> "For NINO %s: forename is greater than 26 chars",
+      LogClassificationRule("/forename", "pattern") -> "For NINO %s: forename contained an unrecognised char sequence",
+      LogClassificationRule("", "required", "forename") -> "For NINO %s: forename was mandatory but not supplied",
+      LogClassificationRule("/surname", "minLength") -> "For NINO %s: surname is less than 1 char, needs to be at least 1 char",
+      LogClassificationRule("/surname", "maxLength") -> "For NINO %s: surname is greater than 300 chars",
+      LogClassificationRule("/surname", "pattern") -> "For NINO %s: surname contained an unrecognised char sequence",
+      LogClassificationRule("", "required", "surname") -> "For NINO %s: surname was mandatory but not supplied",
+      LogClassificationRule("/dateOfBirth", "minLength") -> "For NINO %s: date of birth is less than 8 chars, needs to be 8 chars",
+      LogClassificationRule("/dateOfBirth", "maxLength") -> "For NINO %s: date of birth is greater than 8 chars, needs to be 8 chars",
+      LogClassificationRule("/dateOfBirth", "pattern") -> "For NINO %s: date of birth contained an unrecognised char sequence",
+      LogClassificationRule("", "required", "dateOfBirth") -> "For NINO %s: date of birth was mandatory but not supplied",
       LogClassificationRule("/contactDetails/countryCode", "minLength") -> "For NINO %s: country code is less than 2 chars, needs to be 2 chars",
       LogClassificationRule("/contactDetails/countryCode", "maxLength") -> "For NINO %s: country code is greater than 2 chars, needs to be 2 chars",
-      LogClassificationRule("/contactDetails/countryCode", "pattern") ->   "For NINO %s: country code contained an unrecognised char sequence",
-      LogClassificationRule("/contactDetails/address1", "maxLength") ->    "For NINO %s: address1 field is greater than 35 chars",
-      LogClassificationRule("/contactDetails", "required", "address1") ->  "For NINO %s: address1 field was mandatory but not supplied",
-      LogClassificationRule("/contactDetails/address2", "maxLength") ->    "For NINO %s: address2 field is greater than 35 chars",
-      LogClassificationRule("/contactDetails", "required", "address2") ->  "For NINO %s: address2 field was mandatory but not supplied",
-      LogClassificationRule("/contactDetails/address3", "maxLength") ->    "For NINO %s: address3 field is greater than 35 chars",
-      LogClassificationRule("/contactDetails/address4", "maxLength") ->    "For NINO %s: address4 field is greater than 35 chars",
-      LogClassificationRule("/contactDetails/address5", "maxLength") ->    "For NINO %s: address5 field is greater than 35 chars",
-      LogClassificationRule("/contactDetails/postcode", "maxLength") ->    "For NINO %s: postcode is greater than 10 chars",
-      LogClassificationRule("/contactDetails", "required", "postcode") ->  "For NINO %s: postcode was mandatory but not supplied",
-      LogClassificationRule("/contactDetails/communicationPreference", "minLength") ->   "For NINO %s: communications preference is less than 2 chars, needs to be 2 chars",
-      LogClassificationRule("/contactDetails/communicationPreference", "maxLength") ->   "For NINO %s: communications preference is greater than 2 chars, needs to be 2 chars",
-      LogClassificationRule("/contactDetails/communicationPreference", "pattern") ->     "For NINO %s: communications preference contained an unrecognised char sequence",
+      LogClassificationRule("/contactDetails/countryCode", "pattern") -> "For NINO %s: country code contained an unrecognised char sequence",
+      LogClassificationRule("/contactDetails/address1", "maxLength") -> "For NINO %s: address1 field is greater than 35 chars",
+      LogClassificationRule("/contactDetails", "required", "address1") -> "For NINO %s: address1 field was mandatory but not supplied",
+      LogClassificationRule("/contactDetails/address2", "maxLength") -> "For NINO %s: address2 field is greater than 35 chars",
+      LogClassificationRule("/contactDetails", "required", "address2") -> "For NINO %s: address2 field was mandatory but not supplied",
+      LogClassificationRule("/contactDetails/address3", "maxLength") -> "For NINO %s: address3 field is greater than 35 chars",
+      LogClassificationRule("/contactDetails/address4", "maxLength") -> "For NINO %s: address4 field is greater than 35 chars",
+      LogClassificationRule("/contactDetails/address5", "maxLength") -> "For NINO %s: address5 field is greater than 35 chars",
+      LogClassificationRule("/contactDetails/postcode", "maxLength") -> "For NINO %s: postcode is greater than 10 chars",
+      LogClassificationRule("/contactDetails", "required", "postcode") -> "For NINO %s: postcode was mandatory but not supplied",
+      LogClassificationRule("/contactDetails/communicationPreference", "minLength") -> "For NINO %s: communications preference is less than 2 chars, needs to be 2 chars",
+      LogClassificationRule("/contactDetails/communicationPreference", "maxLength") -> "For NINO %s: communications preference is greater than 2 chars, needs to be 2 chars",
+      LogClassificationRule("/contactDetails/communicationPreference", "pattern") -> "For NINO %s: communications preference contained an unrecognised char sequence",
       LogClassificationRule("/contactDetails", "required", "communicationPreference") -> "For NINO %s: communications preference was mandatory but not supplied",
       LogClassificationRule("/contactDetails/phoneNumber", "maxLength") -> "For NINO %s: phone number is greater than 15 chars",
-      LogClassificationRule("/contactDetails/email", "maxLength") ->       "For NINO %s: email address is greater than 254 chars",
-      LogClassificationRule("/registrationChannel", "maxLength") ->        "For NINO %s: registration channel is greater than 10 chars",
-      LogClassificationRule("/registrationChannel", "pattern") ->          "For NINO %s: registration channel contained an unrecognised char sequence",
-      LogClassificationRule("", "required", "registrationChannel") ->      "For NINO %s: registration channel was mandatory but not supplied",
-      LogClassificationRule("/nino", "minLength") ->                       "For NINO %s: nino is less than 9 chars, needs to be 9 chars",
-      LogClassificationRule("/nino", "maxLength") ->                       "For NINO %s: nino is greater than 9 chars, needs to be 9 chars",
-      LogClassificationRule("/nino", "pattern") ->                         "For NINO %s: nino contained an unrecognised char sequence",
-      LogClassificationRule("", "required", "nino") ->                     "Nino was mandatory but not supplied"
+      LogClassificationRule("/contactDetails/email", "maxLength") -> "For NINO %s: email address is greater than 254 chars",
+      LogClassificationRule("/registrationChannel", "maxLength") -> "For NINO %s: registration channel is greater than 10 chars",
+      LogClassificationRule("/registrationChannel", "pattern") -> "For NINO %s: registration channel contained an unrecognised char sequence",
+      LogClassificationRule("", "required", "registrationChannel") -> "For NINO %s: registration channel was mandatory but not supplied",
+      LogClassificationRule("/nino", "minLength") -> "For NINO %s: nino is less than 9 chars, needs to be 9 chars",
+      LogClassificationRule("/nino", "maxLength") -> "For NINO %s: nino is greater than 9 chars, needs to be 9 chars",
+      LogClassificationRule("/nino", "pattern") -> "For NINO %s: nino contained an unrecognised char sequence",
+      LogClassificationRule("", "required", "nino") -> "Nino was mandatory but not supplied"
 
 
     )

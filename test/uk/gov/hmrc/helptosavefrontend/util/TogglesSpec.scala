@@ -70,7 +70,7 @@ class TogglesSpec extends UnitSpec with TestSupport with BeforeAndAfter {
       result shouldBe Right(1)
     }
 
-    "given a FEATURE_THEN that is not enabled and has an action, the action is executed" in {
+    "given a FEATURE_THEN that is not enabled and has an action, the default value is returned in a left" in {
       val ftrThen = FEATURE_THEN[Int]("test-feature0", false, Some(0), Logger("test-feature0"))
       def action = 1
       val result = ftrThen.thenDo {action}
