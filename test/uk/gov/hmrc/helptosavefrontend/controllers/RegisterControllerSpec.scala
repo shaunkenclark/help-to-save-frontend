@@ -776,6 +776,18 @@ class RegisterControllerSpec extends TestSupport {
         register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: communications preference was mandatory but not supplied"
       }
 
+      "when given a NSIUserInfo that the json validation schema reports that the phone number field is the wrong type, return a message" in {
+        import scala.collection.JavaConversions._
+
+        var userInfoJson = JsonLoader.fromString(Json.toJson(validNSIUserInfo).toString)
+        userInfoJson.path("contactDetails").asInstanceOf[ObjectNode].put("phoneNumber", 0)
+        val report: ProcessingReport = jsonValidator.validate(validationSchema, userInfoJson)
+        val messages = report.iterator().toSeq
+        messages.length shouldBe 1
+        register.classify(messages(0), validNSIUserInfo).isLeft shouldBe true
+        register.classify(messages(0), validNSIUserInfo).fold(identity, _ => "") shouldBe "For NINO WM123456C: phone number field is wrong type, needs to be a string"
+      }
+
 
       "when given a NSIUserInfo that the json validation schema reports that the phone number is too long" in {
         import scala.collection.JavaConversions._
