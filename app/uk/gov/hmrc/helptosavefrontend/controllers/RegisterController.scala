@@ -435,6 +435,7 @@ object RegisterController {
       LogClassificationRule("/contactDetails/communicationPreference", "pattern") -> "For NINO %s: communications preference contained an unrecognised char sequence",
       LogClassificationRule("/contactDetails", "required", "communicationPreference") -> "For NINO %s: communications preference was mandatory but not supplied",
       LogClassificationRule("/contactDetails/phoneNumber", "maxLength") -> "For NINO %s: phone number is greater than 15 chars",
+      LogClassificationRule("/contactDetails/phoneNumber", "type") -> "For NINO %s: phone number field is wrong type, needs to be a string",
       LogClassificationRule("/contactDetails/email", "maxLength") -> "For NINO %s: email address is greater than 254 chars",
       LogClassificationRule("/registrationChannel", "maxLength") -> "For NINO %s: registration channel is greater than 10 chars",
       LogClassificationRule("/registrationChannel", "pattern") -> "For NINO %s: registration channel contained an unrecognised char sequence",
