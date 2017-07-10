@@ -29,16 +29,16 @@ import scala.concurrent.Future
 @Singleton
 class StartPagesController @Inject()(val messagesApi: MessagesApi) extends FrontendController with I18nSupport {
 
-  def getApplyHelpToSave: Action[AnyContent] = Action.async { implicit request ⇒
-    Future.successful(Ok(views.html.core.apply_help_to_save()))
+  def getApplyHelpToSave: Action[AnyContent] = Action { implicit request ⇒
+    Ok(views.html.core.apply_help_to_save())
   }
 
-  def getAboutHelpToSave: Action[AnyContent] = Action.async { implicit request ⇒
-    Future.successful(Ok(views.html.core.about_help_to_save()))
+  def getAboutHelpToSave: Action[AnyContent] = Action { implicit request ⇒
+    Ok(views.html.core.about_help_to_save())
   }
 
-  def getEligibilityHelpToSave: Action[AnyContent] = Action.async { implicit request ⇒
-    Future.successful(Ok(views.html.core.eligibility_help_to_save()))
+  def getEligibilityHelpToSave: Action[AnyContent] = Action { implicit request ⇒
+    Ok(views.html.core.eligibility_help_to_save())
   }
 
 }

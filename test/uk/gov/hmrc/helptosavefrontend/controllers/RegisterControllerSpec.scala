@@ -21,7 +21,7 @@ import cats.instances.future._
 import play.api.http.Status
 import play.api.i18n.MessagesApi
 import play.api.libs.json.{JsValue, Reads, Writes}
-import play.api.mvc.{Result => PlayResult}
+import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core._
@@ -29,10 +29,13 @@ import uk.gov.hmrc.helptosavefrontend.TestSupport
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
 import uk.gov.hmrc.helptosavefrontend.connectors._
 import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.OAuthConfiguration
-import uk.gov.hmrc.helptosavefrontend.models.HtsAuth.{AuthWithConfidence, UserDetailsUrlWithAllEnrolments}
+import uk.gov.hmrc.helptosavefrontend.models.HtsAuth.AuthWithConfidence
 import uk.gov.hmrc.helptosavefrontend.models.MissingUserInfo.{Contact, Email}
 import uk.gov.hmrc.helptosavefrontend.models._
+import uk.gov.hmrc.helptosavefrontend.repositories.EnrolmentStore
+import uk.gov.hmrc.helptosavefrontend.repositories.EnrolmentStore.{Enrolled, NotEnrolled}
 import uk.gov.hmrc.helptosavefrontend.services.HelpToSaveService
+import uk.gov.hmrc.helptosavefrontend.util.NINO
 import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -41,12 +44,13 @@ import scala.concurrent.duration._
 
 class RegisterControllerSpec extends TestSupport {
 
-  private val mockHtsService = mock[HelpToSaveService]
+  val mockHtsService = mock[HelpToSaveService]
+  val mockEnrolementStore = mock[EnrolmentStore]
 
   val nino = "WM123456C"
 
-  private val enrolment = Enrolment("HMRC-NI", Seq(EnrolmentIdentifier("NINO", nino)), "activated", ConfidenceLevel.L200)
-  private val enrolments = Enrolments(Set(enrolment))
+  val enrolment = Enrolment("HMRC-NI", Seq(EnrolmentIdentifier("NINO", nino)), "activated", ConfidenceLevel.L200)
+  val enrolments = Enrolments(Set(enrolment))
 
   private val mockAuthConnector = mock[PlayAuthConnector]
   val mockSessionCacheConnector: SessionCacheConnector = mock[SessionCacheConnector]
@@ -57,7 +61,8 @@ class RegisterControllerSpec extends TestSupport {
   val register = new RegisterController(
     fakeApplication.injector.instanceOf[MessagesApi],
     mockHtsService,
-    mockSessionCacheConnector)(
+    mockSessionCacheConnector,
+    mockEnrolementStore)(
     fakeApplication, ec) {
     override val oauthConfig = testOAuthConfiguration
     override lazy val authConnector = mockAuthConnector
@@ -100,6 +105,15 @@ class RegisterControllerSpec extends TestSupport {
       .expects(AuthWithConfidence, *, *)
       .returning(Future.successful(()))
 
+  def mockEnrolmentStorePut(nino: NINO, imtpNeedsUpdate: Boolean)(result: Either[String,Unit]): Unit =
+    (mockEnrolementStore.put(_: NINO, _: Boolean))
+    .expects(nino, imtpNeedsUpdate)
+    .returning(EitherT.fromEither[Future](result))
+
+  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String,EnrolmentStore.Status]): Unit =
+    (mockEnrolementStore.get(_: NINO))
+      .expects(nino)
+      .returning(EitherT.fromEither[Future](result))
 
   "The RegisterController" when {
 
@@ -110,44 +124,50 @@ class RegisterControllerSpec extends TestSupport {
         register.confirmDetails(Some(authorisationCode), None, None, None)(FakeRequest())
 
 
-      "redirect to confirm-details with the NINO as the authorisation code if redirects to OAUTH are disabled" in {
-        val register = new RegisterController(
-          fakeApplication.injector.instanceOf[MessagesApi],
-          mockHtsService,
-          mockSessionCacheConnector)(
-          fakeApplication, ec) {
-          override val oauthConfig = testOAuthConfiguration.copy(enabled = false)
-          override lazy val authConnector = mockAuthConnector
-        }
+      "show the access denied page if a NINO is not available" in {
+        mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments.copy(enrolments = Set.empty[Enrolment]))
 
-        mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
-
-        implicit val request = FakeRequest()
-        val result = register.getAuthorisation(request)
-        status(result) shouldBe Status.SEE_OTHER
-        redirectLocation(result) shouldBe Some(routes.RegisterController.confirmDetails(Some(nino), None,None,None).absoluteURL())
+        val result = doConfirmDetailsRequest()
+        implicit val r = FakeRequest()
+        redirectLocation(result) shouldBe Some(routes.RegisterController.accessDenied().absoluteURL)
       }
 
-      "return the not eligible page if redirects to OAUTH are disabled and a NINO is not available" in {
-        val register = new RegisterController(
-          fakeApplication.injector.instanceOf[MessagesApi],
-          mockHtsService,
-          mockSessionCacheConnector)(
-          fakeApplication, ec) {
-          override val oauthConfig = testOAuthConfiguration.copy(enabled = false)
-          override lazy val authConnector = mockAuthConnector
+      "check if the user has already enrolled to HTS" in {
+        inSequence{
+          mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+          mockEnrolmentStoreGet(nino)(Right(Enrolled(false)))
         }
 
-        mockPlayAuthWithRetrievals(AuthWithConfidence)(Enrolments(Set.empty[Enrolment]))
-
-        implicit val request = FakeRequest()
-        val result = register.getAuthorisation(request)
-        status(result) shouldBe Status.SEE_OTHER
-        redirectLocation(result) shouldBe Some(routes.RegisterController.notEligible().absoluteURL())
+        Await.result(doConfirmDetailsRequest(), 5.seconds)
       }
 
-      "redirect to OAuth to get an access token if enabled" in {
-        mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+
+      "return an InternalServerError if there is an error checking the enrolment status" in {
+        inSequence{
+          mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+          mockEnrolmentStoreGet(nino)(Left("Uh oh"))
+        }
+
+        val result = doConfirmDetailsRequest()
+        status(result) shouldBe INTERNAL_SERVER_ERROR
+      }
+
+      "show the user the relevant page if they are already enrolled" in {
+        inSequence{
+          mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+          mockEnrolmentStoreGet(nino)(Right(Enrolled(false)))
+        }
+
+        val result = doConfirmDetailsRequest()
+        contentAsString(result) should include("Successfully created account")
+      }
+
+      "redirect to OAuth to get an access token if enabled and the user is not already enrolled" in {
+        inSequence{
+          mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+          mockEnrolmentStoreGet(nino)(Right(NotEnrolled))
+        }
+
 
         val result = doConfirmDetailsRequest()
         status(result) shouldBe Status.SEE_OTHER
@@ -172,6 +192,31 @@ class RegisterControllerSpec extends TestSupport {
           "redirect_uri" -> testOAuthConfiguration.callbackURL
         ))
       }
+
+
+      "redirect to confirm-details with the NINO as the authorisation code if " +
+        "redirects to OAUTH are disabled and the user is not already enrolled" in {
+        val register = new RegisterController(
+          fakeApplication.injector.instanceOf[MessagesApi],
+          mockHtsService,
+          mockSessionCacheConnector,
+          mockEnrolementStore)(
+          fakeApplication, ec) {
+          override val oauthConfig = testOAuthConfiguration.copy(enabled = false)
+          override lazy val authConnector = mockAuthConnector
+        }
+
+        inSequence{
+          mockPlayAuthWithRetrievals(AuthWithConfidence)(enrolments)
+          mockEnrolmentStoreGet(nino)(Right(NotEnrolled))
+        }
+
+        implicit val request = FakeRequest()
+        val result = register.getAuthorisation(request)
+        status(result) shouldBe Status.SEE_OTHER
+        redirectLocation(result) shouldBe Some(routes.RegisterController.confirmDetails(Some(nino), None,None,None).absoluteURL())
+      }
+
 
       "return a 500 if there is an error while getting the authorisation token" in {
         val result = register.confirmDetails(None, Some("uh oh"), None, None)(FakeRequest())
@@ -234,7 +279,7 @@ class RegisterControllerSpec extends TestSupport {
         html should include("Contact")
       }
 
-      "return an error" must {
+      "return an error" when {
 
         def isError(result: Future[PlayResult]): Boolean =
           status(result) == 500
@@ -299,18 +344,29 @@ class RegisterControllerSpec extends TestSupport {
         inSequence {
           mockPlayAuthWithWithConfidence()
           mockSessionCacheConnectorGet(Some(HTSSession(Some(validNSIUserInfo))))
-          mockCreateAccount(validNSIUserInfo)()
+          mockCreateAccount(validNSIUserInfo)(Left(SubmissionFailure(None, "", "")))
         }
-        val result = Await.result(doCreateAccountRequest(), 5.seconds)
-        status(result) shouldBe Status.OK
+        Await.result(doCreateAccountRequest(), 5.seconds)
       }
 
-
-      "indicate to the user that the creation was successful if the creation was successful" in {
+      "add the user to the enrolment store if the account creation was successful" in {
         inSequence {
           mockPlayAuthWithWithConfidence()
           mockSessionCacheConnectorGet(Some(HTSSession(Some(validNSIUserInfo))))
           mockCreateAccount(validNSIUserInfo)()
+          mockEnrolmentStorePut(validNSIUserInfo.nino, false)(Left(""))
+        }
+        Await.result(doCreateAccountRequest(), 5.seconds)
+      }
+
+
+      "indicate to the user that the creation was successful if the creation was successful" +
+        "and the write to the enrolment store was succesful" in {
+        inSequence {
+          mockPlayAuthWithWithConfidence()
+          mockSessionCacheConnectorGet(Some(HTSSession(Some(validNSIUserInfo))))
+          mockCreateAccount(validNSIUserInfo)()
+          mockEnrolmentStorePut(validNSIUserInfo.nino, false)(Right(()))
         }
 
         val result = doCreateAccountRequest()
@@ -320,15 +376,18 @@ class RegisterControllerSpec extends TestSupport {
 
       "indicate to the user that the creation was not successful " when {
 
+        def checkAccountCreationFailed(result: Future[PlayResult]): Unit = {
+          val html = contentAsString(result)
+          html should include("Account creation failed")
+        }
+
         "the user details cannot be found in the session cache" in {
           inSequence {
             mockPlayAuthWithWithConfidence()
             mockSessionCacheConnectorGet(None)
           }
 
-          val result = doCreateAccountRequest()
-          val html = contentAsString(result)
-          html should include("Account creation failed")
+          checkAccountCreationFailed(doCreateAccountRequest())
         }
 
         "the help to save service returns with an error" in {
@@ -338,10 +397,21 @@ class RegisterControllerSpec extends TestSupport {
             mockCreateAccount(validNSIUserInfo)(Left(SubmissionFailure(None, "Uh oh", "Uh oh")))
           }
 
-          val result = doCreateAccountRequest()
-          val html = contentAsString(result)
-          html should include("Account creation failed")
+          checkAccountCreationFailed(doCreateAccountRequest())
+
         }
+
+        "the write to the enrolment store fails" in {
+          inSequence {
+            mockPlayAuthWithWithConfidence()
+            mockSessionCacheConnectorGet(Some(HTSSession(Some(validNSIUserInfo))))
+            mockCreateAccount(validNSIUserInfo)()
+            mockEnrolmentStorePut(validNSIUserInfo.nino, false)(Left(""))
+          }
+
+          checkAccountCreationFailed(doCreateAccountRequest())
+        }
+
       }
     }
 

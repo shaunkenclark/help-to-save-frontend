@@ -20,7 +20,6 @@ import javax.inject.Singleton
 
 import cats.data.EitherT
 import com.google.inject.Inject
-import play.api.Logger
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
 import uk.gov.hmrc.helptosavefrontend.connectors.{HelpToSaveConnector, NSIConnector}
 import uk.gov.hmrc.helptosavefrontend.models.{EligibilityCheckResult, NSIUserInfo, UserInfo}
@@ -30,7 +29,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class HelpToSaveService @Inject()(helpToSaveConnector: HelpToSaveConnector, nSIConnector: NSIConnector) {
+class HelpToSaveService @Inject()(helpToSaveConnector: HelpToSaveConnector, nSIConnector: NSIConnector) extends Logging {
 
   def checkEligibility(nino: String,
                        oauthAuthorisationCode: String)(implicit hc: HeaderCarrier): Result[EligibilityCheckResult] =
@@ -40,10 +39,10 @@ class HelpToSaveService @Inject()(helpToSaveConnector: HelpToSaveConnector, nSIC
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,SubmissionFailure,SubmissionSuccess] =
     EitherT(nSIConnector.createAccount(userInfo).map[Either[SubmissionFailure,SubmissionSuccess]] {
       case success: SubmissionSuccess =>
-        Logger.info(s"Successfully created an account for ${userInfo.nino}")
+        logger.info(s"Successfully created an account for ${userInfo.nino}")
         Right(success)
       case failure: SubmissionFailure =>
-        Logger.error(s"Could not create an account for ${userInfo.nino} due to $failure")
+        logger.error(s"Could not create an account for ${userInfo.nino} due to $failure")
         Left(failure)
     })
 

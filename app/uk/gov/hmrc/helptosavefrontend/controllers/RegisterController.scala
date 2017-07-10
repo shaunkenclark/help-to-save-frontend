@@ -26,15 +26,16 @@ import cats.syntax.traverse._
 import com.google.inject.Inject
 import configs.syntax._
 import play.api.i18n.{I18nSupport, MessagesApi}
-import play.api.mvc.{Action, AnyContent, Request}
-import play.api.{Application, Logger}
+import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.Application
 import uk.gov.hmrc.helptosavefrontend.config.FrontendAppConfig.personalAccountUrl
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.SubmissionFailure
 import uk.gov.hmrc.helptosavefrontend.connectors._
 import uk.gov.hmrc.helptosavefrontend.controllers.RegisterController.OAuthConfiguration
 import uk.gov.hmrc.helptosavefrontend.models.{EligibilityCheckResult, HTSSession, NSIUserInfo}
+import uk.gov.hmrc.helptosavefrontend.repositories.EnrolmentStore
 import uk.gov.hmrc.helptosavefrontend.services.HelpToSaveService
-import uk.gov.hmrc.helptosavefrontend.util.NINO
+import uk.gov.hmrc.helptosavefrontend.util.{Logging, NINO}
 import uk.gov.hmrc.helptosavefrontend.views
 import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -44,15 +45,38 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class RegisterController @Inject()(val messagesApi: MessagesApi,
                                    helpToSaveService: HelpToSaveService,
-                                   sessionCacheConnector: SessionCacheConnector)(implicit app: Application, ec: ExecutionContext)
-  extends HelpToSaveAuth(app) with I18nSupport {
+                                   sessionCacheConnector: SessionCacheConnector,
+                                   enrolmentStore: EnrolmentStore
+                                  )(implicit app: Application, ec: ExecutionContext)
+  extends HelpToSaveAuth(app) with I18nSupport with Logging {
 
   private[controllers] val oauthConfig = app.configuration.underlying.get[OAuthConfiguration]("oauth").value
 
   def getAuthorisation: Action[AnyContent] = authorisedForHtsWithEnrolments {
     implicit request ⇒
-      implicit userUrlWithNino ⇒
-        Future.successful(redirectForAuthorisationCode(request, userUrlWithNino))
+      implicit maybeNino ⇒
+        maybeNino match {
+          case None ⇒
+            logger.error("Could not get authorisation code: NINO not present")
+            Future.successful(Redirect(routes.RegisterController.accessDenied().absoluteURL()))
+
+          case Some(nino) ⇒
+            logger.info(s"Checking if user $nino is already enrolled")
+            enrolmentStore.get(nino).fold(
+              { e ⇒
+                logger.error(s"Could not see if user $nino was already enrolled: $e")
+                InternalServerError("")
+              },
+              _.fold({
+                logger.info(s"User $nino is not enrolled - getting authorisation code")
+                redirectForAuthorisationCode(request, nino)
+              }, { imtpNeedsUpdate ⇒
+                logger.info(s"User $nino is already enrolled")
+                successfullyCreatedAccountResult
+              }
+              )
+            )
+        }
   }
 
   def confirmDetails(code: Option[String],
@@ -64,21 +88,14 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
         authorisedForHtsWithEnrolments {
           implicit request ⇒
             implicit maybeNino ⇒
-              val result = for {
-                nino ← EitherT.fromOption[Future](maybeNino, "could not retrieve either userDetailsUrl or NINO from auth")
-                eligible ← helpToSaveService.checkEligibility(nino, authorisationCode)
-                nsiUserInfo ← toNSIUserInfo(eligible)
-                _ ← writeToKeyStore(nsiUserInfo)
-              } yield (nino, eligible)
-
-              result.fold(
+              doEligibilityCheck(maybeNino, authorisationCode).fold(
                 error ⇒ {
-                  Logger.error(s"Could not perform eligibility check: $error")
+                  logger.error(s"Could not perform eligibility check: $error")
                   InternalServerError("")
                 }, { case (nino, eligibility) ⇒
                   eligibility.result.fold(
                     infos ⇒ {
-                      Logger.error(s"user $nino has missing information: ${infos.missingInfo.mkString(",")}")
+                      logger.error(s"user $nino has missing information: ${infos.missingInfo.mkString(",")}")
                       Ok(views.html.register.missing_user_info(infos.missingInfo, personalAccountUrl))
                     }, {
                       case Some(info) ⇒ Ok(views.html.register.confirm_details(info))
@@ -89,7 +106,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
         }
 
       case (_, Some(e)) ⇒
-        Logger.error(s"Could not get authorisation code: $e. Error description was" +
+        logger.error(s"Could not get authorisation code: $e. Error description was" +
           s"${error_description.getOrElse("-")}, error code was ${error_code.getOrElse("-")}")
         // TODO: do something better
         Action {
@@ -98,7 +115,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
 
       case _ ⇒
         // we should never reach here - we shouldn't have a successful code and an error at the same time
-        Logger.error("Inconsistent result found when attempting to retrieve an authorisation code")
+        logger.error("Inconsistent result found when attempting to retrieve an authorisation code")
         Action {
           InternalServerError("")
         }
@@ -113,19 +130,20 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
   def createAccountHelpToSave: Action[AnyContent] = authorisedForHtsWithConfidence {
     implicit request ⇒
       val result = for {
-        userInfo ← retrieveUserInfo()
+        userInfo ← retrieveUserInfoFromSessionCache()
         _ ← helpToSaveService.createAccount(userInfo).leftMap(submissionFailureToString)
+        _ ← enrolmentStore.put(userInfo.nino, false)
       } yield userInfo
 
       // TODO: plug in actual pages below
       result.fold(
         error ⇒ {
-          Logger.error(s"Could not create account: $error")
+          logger.error(s"Could not create account: $error")
           Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page(s"Account creation failed: $error"))
         },
         info ⇒ {
-          Logger.debug(s"Successfully created account for ${info.nino}")
-          Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page("Successfully created account"))
+          logger.info(s"Successfully created account for ${info.nino}")
+          successfullyCreatedAccountResult
         }
       )
   }
@@ -139,7 +157,18 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     Future.successful(Ok(views.html.core.not_eligible()))
   }
 
-  private def retrieveUserInfo()(implicit hc: HeaderCarrier): EitherT[Future, String, NSIUserInfo] = {
+  private def doEligibilityCheck(maybeNino: Option[NINO],
+                                 authorisationCode: String
+                                )(implicit hc: HeaderCarrier): EitherT[Future, NINO, (NINO, EligibilityCheckResult)] =
+    for {
+      nino ← EitherT.fromOption[Future](maybeNino, "could not retrieve either userDetailsUrl or NINO from auth")
+      eligible ← helpToSaveService.checkEligibility(nino, authorisationCode)
+      nsiUserInfo ← toNSIUserInfo(eligible)
+      _ ← writeToSessionCache(nsiUserInfo)
+    } yield (nino, eligible)
+
+
+  private def retrieveUserInfoFromSessionCache()(implicit hc: HeaderCarrier): EitherT[Future, String, NSIUserInfo] = {
     val session = sessionCacheConnector.get
     val userInfo = session.map(_.flatMap(_.userInfo))
 
@@ -153,7 +182,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     * is not defined, don't do anything and return [[None]]. Any errors during writing to key-store are
     * captured as a [[String]] in the [[Either]].
     */
-  private def writeToKeyStore(userDetails: Option[NSIUserInfo])(implicit hc: HeaderCarrier): EitherT[Future, String, Option[CacheMap]] = {
+  private def writeToSessionCache(userDetails: Option[NSIUserInfo])(implicit hc: HeaderCarrier): EitherT[Future, String, Option[CacheMap]] = {
     // write to key-store
     val cacheMapOption: Option[Future[CacheMap]] =
       userDetails.map { details ⇒ sessionCacheConnector.put(HTSSession(Some(details))) }
@@ -169,7 +198,6 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
   }
 
   private def toNSIUserInfo(eligibilityResult: EligibilityCheckResult): EitherT[Future, String, Option[NSIUserInfo]] = {
-
     val mayBeNSIUserInfo: Either[String, Option[NSIUserInfo]] = eligibilityResult.result.fold(
       _ ⇒ Right(None), {
         case Some(info) ⇒
@@ -190,8 +218,8 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
 
   private lazy val redirectForAuthorisationCode =
     if (oauthConfig.enabled) {
-      { (_: Request[AnyContent], _: Option[NINO]) ⇒
-        Logger.info("Received request to get user details: redirecting to oauth obtain authorisation code")
+      { (_: Request[AnyContent], _: NINO) ⇒
+        logger.info("Received request to get user details: redirecting to oauth obtain authorisation code")
 
         // we need to get an authorisation token from OAuth - redirect to OAuth here. When the authorisation
         // is done they'll redirect to the callback url we give them
@@ -205,20 +233,19 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
           ))
       }
     } else {
-      { (request: Request[AnyContent], userDetailsUrlWithNino: Option[NINO]) ⇒
+      { (request: Request[AnyContent], nino: NINO) ⇒
         // if the redirect to oauth is not enabled redirect straight to our 'confirm-details' endpoint
         // using the NINO as the authorisation code
-        implicit val r = request
+        implicit val r: Request[AnyContent] = request
 
-        userDetailsUrlWithNino.fold {
-          Logger.error("NINO or user details URI not available")
-          Redirect(routes.RegisterController.notEligible().absoluteURL())
-        } { nino ⇒
-          Logger.info(s"Received request to get user details: redirecting to get user details using NINO $nino as authorisation code")
-          Redirect(routes.RegisterController.confirmDetails(Some(nino), None, None, None).absoluteURL())
-        }
+        logger.info(s"Received request to get user details: redirecting to get user details using NINO $nino as authorisation code")
+        Redirect(routes.RegisterController.confirmDetails(Some(nino), None, None, None).absoluteURL())
       }
     }
+
+  private def successfullyCreatedAccountResult[A](implicit request: Request[A]): Result =
+    Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page("Successfully created account"))
+
 
 }
 

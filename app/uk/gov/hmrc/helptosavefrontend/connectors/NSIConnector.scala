@@ -19,7 +19,6 @@ package uk.gov.hmrc.helptosavefrontend.connectors
 import javax.inject.Singleton
 
 import com.google.inject.ImplementedBy
-import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosavefrontend.config.FrontendAppConfig.{nsiAuthHeaderKey, nsiBasicAuth, nsiUrl}
@@ -27,6 +26,7 @@ import uk.gov.hmrc.helptosavefrontend.config.WSHttpProxy
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosavefrontend.models.NSIUserInfo
 import uk.gov.hmrc.helptosavefrontend.util.HttpResponseOps._
+import uk.gov.hmrc.helptosavefrontend.util.Logging
 import uk.gov.hmrc.play.http._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -49,29 +49,32 @@ object NSIConnector {
 }
 
 @Singleton
-class NSIConnectorImpl extends NSIConnector {
+class NSIConnectorImpl extends NSIConnector with Logging {
 
   val httpProxy = new WSHttpProxy
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-
-    Logger.info(s"Trying to create an account for ${userInfo.nino} using NSI endpoint $nsiUrl")
-    Logger.info(s"CreateAccount json for ${userInfo.nino} is ${Json.toJson(userInfo)}")
+    logger.info(s"Trying to create an account for ${userInfo.nino} using NSI endpoint $nsiUrl")
+    logger.info(s"CreateAccount json for ${userInfo.nino} is ${Json.toJson(userInfo)}")
 
     httpProxy.post(nsiUrl, userInfo, Map(nsiAuthHeaderKey → nsiBasicAuth))(
       NSIUserInfo.nsiUserInfoFormat, hc.copy(authorization = None))
       .map { response ⇒
         response.status match {
           case Status.CREATED ⇒
-            Logger.info(s"Successfully created a NSI account for ${userInfo.nino}")
+            logger.info(s"Received HTTP 201 (created) from NS&I create account request: ${userInfo.nino}")
+            SubmissionSuccess()
+
+          case Status.CONFLICT ⇒
+            logger.info(s"Received HTTP 409 (conflict) from NS&I create account request: ${userInfo.nino}. Account had already been created")
             SubmissionSuccess()
 
           case Status.BAD_REQUEST ⇒
-            Logger.error(s"Failed to create an account for ${userInfo.nino} due to bad request")
+            logger.error(s"Failed to create an account for ${userInfo.nino} due to bad request")
             handleBadRequestResponse(response)
 
           case other ⇒
-            Logger.warn(s"Unexpected error during creating account for ${userInfo.nino}, status: $other")
+            logger.warn(s"Unexpected error during creating account for ${userInfo.nino}, status: $other")
             SubmissionFailure(None, s"Something unexpected happened; response body: ${response.body}", other.toString)
         }
       }
