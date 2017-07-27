@@ -45,6 +45,7 @@ trait MicroService {
         new sbtdocker.mutable.Dockerfile {
           add("api.nsi.hts.esit:212.250.135.50", "/etc/hosts")
         }
+        //("############## whats inside hosts: " + dockerfile.)
       }
     )
 

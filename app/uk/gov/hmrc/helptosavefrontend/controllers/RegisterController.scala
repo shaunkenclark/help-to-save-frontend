@@ -126,10 +126,15 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
     }
   }
 
+  private def printOutHosts(): List[String] = {
+    println("############# hosts in the host file are: " + )
+  }
+
 
   def createAccountHelpToSave: Action[AnyContent] = authorisedForHtsWithConfidence {
     implicit request ⇒
       val result = for {
+        //hostsFile ← printOutHosts()
         userInfo ← retrieveUserInfo()
         _ ← helpToSaveService.createAccount(userInfo).leftMap(submissionFailureToString)
       } yield userInfo
@@ -137,6 +142,7 @@ class RegisterController @Inject()(val messagesApi: MessagesApi,
       // TODO: plug in actual pages below
       result.fold(
         error ⇒ {
+          printOutHosts()
           Logger.error(s"Could not create account: $error")
           Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page(s"Account creation failed: $error"))
         },
