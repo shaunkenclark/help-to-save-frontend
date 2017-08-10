@@ -32,7 +32,7 @@ import play.api.test.FakeApplication
 
 class CreateAccountIntegrationSpec
   extends WordSpec
-    with  WiremockHelper
+    with WiremockHelper
     with OneServerPerSuite
     with LoginStub
     with BeforeAndAfterEach
@@ -80,7 +80,7 @@ class CreateAccountIntegrationSpec
 
   def createAccountHelpToSave(): WSResponse =
     wsClient
-      .url(s"http://localhost:$port/help-to-save/register/nsi")
+      .url(s"http://localhost:$port/help-to-save/register/create-an-account") //???
       .withHeaders(HeaderNames.COOKIE -> getSessionCookie())
       .get()
       .futureValue
@@ -111,7 +111,7 @@ class CreateAccountIntegrationSpec
   }
 
   def stubKeystore(session: String, nSIUserInfo: NSIUserInfo) = {
-    val keystoreUrl = s"/keystore/company-regisation-frontend/${session}"
+    val keystoreUrl = s"/keystore/help-to-save-frontend/${session}"
     stubFor(get(urlMatching(keystoreUrl))
       .willReturn(
         aResponse().
