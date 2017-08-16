@@ -49,6 +49,12 @@ class EligibilityCheckController  @Inject()(val messagesApi: MessagesApi,
 
   import EligibilityCheckController._
 
+  def confirmWishToCheckEligibility: Action[AnyContent] = authorisedForHts {
+    implicit request ⇒
+      implicit htsContext ⇒
+        Ok(views.html.crap())
+  }
+
   def getCheckEligibility: Action[AnyContent] =  authorisedForHtsWithInfo {
     implicit request ⇒
       implicit htsContext ⇒
