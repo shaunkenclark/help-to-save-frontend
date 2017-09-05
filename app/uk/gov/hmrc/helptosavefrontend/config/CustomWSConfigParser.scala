@@ -31,7 +31,7 @@ import uk.gov.hmrc.helptosavefrontend.util.Logging
 import scala.collection.JavaConverters._
 
 @Singleton
-class CustomWSConfigParser @Inject() (configuration: Configuration, env: Environment) extends WSConfigParser(configuration, env) with Logging {
+class CustomWSConfigParser @Inject() (val configuration: Configuration, env: Environment) extends WSConfigParser(configuration, env) with Logging {
 
   logger.info("Starting CustomWSConfigParser")
 

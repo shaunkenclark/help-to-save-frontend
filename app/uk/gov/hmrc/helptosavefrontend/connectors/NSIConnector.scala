@@ -54,7 +54,7 @@ object NSIConnector {
 }
 
 @Singleton
-class NSIConnectorImpl @Inject() (conf: Configuration, auditor: HTSAuditor, metrics: Metrics) extends NSIConnector with Logging with AppName {
+class NSIConnectorImpl @Inject() (val configuration: Configuration, auditor: HTSAuditor, metrics: Metrics) extends NSIConnector with Logging with AppName {
 
   val timer: Timer = metrics.defaultRegistry.timer("nsi-account-creation-time-ns")
 
@@ -63,10 +63,12 @@ class NSIConnectorImpl @Inject() (conf: Configuration, auditor: HTSAuditor, metr
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
     import uk.gov.hmrc.helptosavefrontend.util.Toggles._
 
-    logger.info(s"Trying to create an account for ${userInfo.nino} using NSI endpoint $nsiUrl")
+    val nino = userInfo.nino
 
-    FEATURE("log-account-creation-json", conf, logger).thenOrElse(
-      logger.info(s"CreateAccount json for ${userInfo.nino} is ${Json.toJson(userInfo)}"),
+    logger.info(s"Trying to create an account using NSI endpoint $nsiUrl", nino)
+
+    FEATURE("log-account-creation-json", configuration, logger).thenOrElse(
+      logger.info(s"CreateAccount json for ${userInfo.nino} is ${Json.toJson(userInfo)}", nino),
       ()
     )
 
@@ -79,31 +81,32 @@ class NSIConnectorImpl @Inject() (conf: Configuration, auditor: HTSAuditor, metr
         response.status match {
           case Status.CREATED ⇒
             auditor.sendEvent(new ApplicationSubmittedEvent(appName, userInfo))
-            logger.info(s"Received 201 from NSI, successfully created account for ${userInfo.nino} ${timeString(time)}")
+            logger.info(s"Received 201 from NSI, successfully created account ${timeString(time)}", nino)
             SubmissionSuccess()
 
           case Status.BAD_REQUEST ⇒
-            logger.warn(s"Failed to create an account for ${userInfo.nino} due to bad request ${timeString(time)}")
+            logger.warn(s"Failed to create an account due to bad request ${timeString(time)}", nino)
             handleBadRequestResponse(response)
 
           case Status.INTERNAL_SERVER_ERROR ⇒
-            logger.warn(s"Received 500 from NSI, failed to create account for ${userInfo.nino} as there was an " +
-              s"internal server error ${timeString(time)}")
+            logger.warn(s"Received 500 from NSI, failed to create account as there was an " +
+              s"internal server error ${timeString(time)}", nino)
             handleBadRequestResponse(response)
 
           case Status.SERVICE_UNAVAILABLE ⇒
-            logger.warn(s"Received 503 from NSI, failed to create account for ${userInfo.nino} as NSI " +
-              s"service is unavailable ${timeString(time)}")
+            logger.warn(s"Received 503 from NSI, failed to create account as NSI " +
+              s"service is unavailable ${timeString(time)}", nino)
             handleBadRequestResponse(response)
 
           case other ⇒
-            logger.warn(s"Unexpected error during creating account for ${userInfo.nino}, status : $other ${timeString(time)}")
+            logger.warn(s"Unexpected error during creating account , status : $other ${timeString(time)}", nino)
             SubmissionFailure(None, s"Something unexpected happened; response body: ${response.body}", other.toString)
         }
-      }.recover {
+      }
+      .recover {
         case e ⇒
           val time = timeContext.stop()
-          logger.warn(s"Encountered error while trying to create account ${timeString(time)}", e)
+          logger.warn(s"Encountered error while trying to create account${timeString(time)}", e, nino)
           SubmissionFailure(None, "Encountered error while trying to create account", e.getMessage)
       }
   }

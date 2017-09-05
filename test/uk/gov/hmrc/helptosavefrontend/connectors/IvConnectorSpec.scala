@@ -37,7 +37,7 @@ class IvConnectorSpec extends TestSupport with ScalaFutures {
 
     val url = s"http://localhost:9938/mdtp/journey/journeyId/${journeyId.Id}"
 
-    val ivConnector = new IvConnectorImpl(mockHttp)
+    val ivConnector = new IvConnectorImpl(mockHttp, fakeApplication.configuration)
 
     def mockHttpResponse(httpResponse: HttpResponse) = {
       (mockHttp.GET[HttpResponse](_: String)(_: HttpReads[HttpResponse], _: HeaderCarrier))

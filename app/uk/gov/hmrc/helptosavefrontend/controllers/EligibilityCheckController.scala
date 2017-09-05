@@ -52,7 +52,7 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
   def getCheckEligibility: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
     checkIfAlreadyEnrolled({
       nino ⇒
-        checkSession {
+        checkSession(nino) {
           // there is no session yet
           getEligibilityActionResult(nino)
         } { session ⇒
@@ -73,8 +73,8 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
   }(redirectOnLoginURL = FrontendAppConfig.checkEligibilityUrl)
 
   val getIsNotEligible: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
-    checkIfAlreadyEnrolled { _ ⇒
-      checkSession {
+    checkIfAlreadyEnrolled { nino ⇒
+      checkSession(nino) {
         SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
       } {
         _.eligibilityCheckResult.fold {
@@ -87,8 +87,8 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
   }(redirectOnLoginURL = FrontendAppConfig.checkEligibilityUrl)
 
   val getIsEligible: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
-    checkIfAlreadyEnrolled { _ ⇒
-      checkSession {
+    checkIfAlreadyEnrolled { nino ⇒
+      checkSession(nino) {
         SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
       } {
         _.eligibilityCheckResult.fold(
@@ -103,8 +103,8 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
   private def getEligibilityActionResult(nino: NINO)(implicit hc: HeaderCarrier,
                                                      htsContext: HtsContext,
                                                      request:    Request[AnyContent]): Future[Result] =
-    performEligibilityChecks(nino).fold(
-      handleEligibilityCheckError,
+    performEligibilityChecks(nino).fold(e ⇒
+      handleEligibilityCheckError(e, nino),
       r ⇒ handleEligibilityResult(r, nino))
 
   private def performEligibilityChecks(nino: NINO)(implicit hc: HeaderCarrier, htsContext: HtsContext): EitherT[Future, Error, EligibilityResultWithUserInfo] =
@@ -136,9 +136,9 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
 
           // set the ITMP flag here but don't worry about the result
           helpToSaveService.setITMPFlag(nino).value.onComplete{
-            case Failure(e)        ⇒ logger.warn(s"For NINO [$nino]: Could not set ITMP flag, future failed: ${e.getMessage}")
-            case Success(Left(e))  ⇒ logger.warn(s"For NINO [$nino]: Could not set ITMP flag: $e")
-            case Success(Right(_)) ⇒ logger.info(s"For NINO [$nino]: Successfully set ITMP flag for user")
+            case Failure(e)        ⇒ logger.warn(s"Could not set ITMP flag, future failed: ${e.getMessage}", nino)
+            case Success(Left(e))  ⇒ logger.warn(s"Could not set ITMP flag: $e", nino)
+            case Success(Right(_)) ⇒ logger.info(s"Successfully set ITMP flag for user", nino)
           }
 
           Ok("You've already got an account - yay!!!")
@@ -153,16 +153,17 @@ class EligibilityCheckController @Inject() (val messagesApi:             Message
       })
   }
 
-  private def handleEligibilityCheckError(error: Error)(implicit request: Request[AnyContent],
-                                                        hc:         HeaderCarrier,
-                                                        htsContext: HtsContext): Result = error.value match {
+  private def handleEligibilityCheckError(error: Error,
+                                          nino:  NINO)(implicit request: Request[AnyContent],
+                                                       hc:         HeaderCarrier,
+                                                       htsContext: HtsContext): Result = error.value match {
     case Left(e) ⇒
-      logger.warn(e)
+      logger.warn(e, nino)
       InternalServerError
 
     case Right(missingUserInfo) ⇒
-      val problemDescription = s"user ${missingUserInfo.nino} has missing information: ${missingUserInfo.missingInfo.mkString(",")}"
-      logger.warn(problemDescription)
+      val problemDescription = s"user has missing information: ${missingUserInfo.missingInfo.mkString(",")}"
+      logger.warn(problemDescription, nino)
       auditor.sendEvent(new EligibilityCheckEvent(appName, missingUserInfo.nino, Some(problemDescription)))
       Ok(views.html.register.missing_user_info(missingUserInfo.missingInfo, personalAccountUrl))
   }

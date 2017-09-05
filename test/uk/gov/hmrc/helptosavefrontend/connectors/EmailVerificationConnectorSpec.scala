@@ -35,7 +35,7 @@ class EmailVerificationConnectorSpec extends UnitSpec with TestSupport with Serv
 
   override lazy val additionalConfig: Configuration = Configuration(
     "microservice.services.email-verification.linkTTLMinutes" → " 120",
-    "microservice.services.email-verification.continue-url" -> "http://localhost:7000/help-to-save/email-verified",
+    "microservice.services.email-verification.continue-url" → "http://localhost:7000/help-to-save/email-verified",
     "microservice.services.email-verification.host" → "localhost",
     "microservice.services.email-verification.port" → "7002"
   )

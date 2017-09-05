@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosavefrontend.connectors
 
 import cats.instances.int._
 import cats.syntax.eq._
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.Configuration
 import play.mvc.Http.Status.OK
 import uk.gov.hmrc.helptosavefrontend.config.FrontendAppConfig.ivUrl
 import uk.gov.hmrc.helptosavefrontend.config.WSHttp
@@ -36,7 +36,7 @@ trait IvConnector {
 }
 
 @Singleton
-class IvConnectorImpl @Inject() (http: WSHttp) extends IvConnector with Logging {
+class IvConnectorImpl @Inject() (http: WSHttp, val configuration: Configuration) extends IvConnector with Logging {
 
   override def getJourneyStatus(journeyId: JourneyId)(implicit hc: HeaderCarrier): Future[Option[IvResponse]] = {
 

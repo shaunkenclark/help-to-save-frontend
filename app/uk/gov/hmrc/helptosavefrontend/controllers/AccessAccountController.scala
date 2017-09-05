@@ -38,7 +38,7 @@ class AccessAccountController @Inject() (val messagesApi:       MessagesApi,
       _ ⇒ Ok(views.html.confirm_check_eligibility())
     }, {
       e ⇒
-        logger.warn(s"Could not check enrolment for ${e.nino} - proceeding to check eligibility")
+        logger.warn("Could not check enrolment - proceeding to check eligibility", e.nino)
         SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
     }
     )

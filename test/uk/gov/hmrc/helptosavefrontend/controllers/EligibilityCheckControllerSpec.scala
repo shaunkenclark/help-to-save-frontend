@@ -47,7 +47,7 @@ class EligibilityCheckControllerSpec
   with GeneratorDrivenPropertyChecks {
 
   val jsonSchemaValidationService = mock[JSONSchemaValidationService]
-  val mockAuditor = mock[HTSAuditor]
+  lazy val mockAuditor = mock[HTSAuditor]
 
   lazy val controller = new EligibilityCheckController(
     fakeApplication.injector.instanceOf[MessagesApi],

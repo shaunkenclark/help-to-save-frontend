@@ -16,10 +16,34 @@
 
 package uk.gov.hmrc.helptosavefrontend.util
 
-import play.api.Logger
+import play.api.{Configuration, Logger}
+import uk.gov.hmrc.helptosavefrontend.util.Toggles.FEATURE
 
 trait Logging {
 
   val logger: Logger = Logger(this.getClass)
 
+  val configuration: Configuration
+
+  private lazy val feature = FEATURE("nino-logging", configuration, logger)
+
+  private lazy val loggingPrefix: String ⇒ String = feature.thenOrElse(nino ⇒ s"For NINO [$nino]:", _ ⇒ "")
+
+  implicit class LoggerOps(val logger: Logger) {
+
+    def debug(message: String, nino: NINO): Unit = logger.debug(loggingPrefix(nino) + message)
+
+    def info(message: String, nino: NINO): Unit = logger.info(loggingPrefix(nino) + message)
+
+    def warn(message: String, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message)
+
+    def warn(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message, e)
+
+    def error(message: String, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message)
+
+    def error(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message, e)
+
+  }
+
 }
+

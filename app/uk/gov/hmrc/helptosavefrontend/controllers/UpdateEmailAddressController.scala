@@ -52,8 +52,8 @@ class UpdateEmailAddressController @Inject() (val sessionCacheConnector:  Sessio
   extends HelpToSaveAuth(app, frontendAuthConnector) with EnrolmentCheckBehaviour with SessionBehaviour with I18nSupport {
 
   def getUpdateYourEmailAddress: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
-    checkIfAlreadyEnrolled { _ ⇒
-      checkSession {
+    checkIfAlreadyEnrolled { nino ⇒
+      checkSession(nino) {
         SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
       } {
         _.eligibilityCheckResult.fold(
@@ -67,7 +67,7 @@ class UpdateEmailAddressController @Inject() (val sessionCacheConnector:  Sessio
 
   def onSubmit(): Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
     checkIfAlreadyEnrolled { nino ⇒
-      checkSession {
+      checkSession(nino) {
         SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
       } { _ ⇒
         UpdateEmailForm.verifyEmailForm.bindFromRequest().fold(

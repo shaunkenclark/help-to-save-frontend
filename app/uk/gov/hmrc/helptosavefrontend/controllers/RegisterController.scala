@@ -24,13 +24,13 @@ import cats.syntax.eq._
 import com.google.inject.Inject
 import play.api.Application
 import play.api.i18n.{I18nSupport, MessagesApi}
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.helptosavefrontend.config.{FrontendAppConfig, FrontendAuthConnector}
 import uk.gov.hmrc.helptosavefrontend.connectors.NSIConnector.SubmissionFailure
 import uk.gov.hmrc.helptosavefrontend.connectors._
 import uk.gov.hmrc.helptosavefrontend.models._
 import uk.gov.hmrc.helptosavefrontend.services.HelpToSaveService
-import uk.gov.hmrc.helptosavefrontend.util.{Crypto, Email, EmailVerificationParams, Logging, toFuture}
+import uk.gov.hmrc.helptosavefrontend.util.{Crypto, Email, Logging, NINO, toFuture}
 import uk.gov.hmrc.helptosavefrontend.views
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -49,8 +49,8 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
   import RegisterController.NSIUserInfoOps
 
   def getConfirmDetailsPage: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
-    checkIfAlreadyEnrolled { _ ⇒
-      checkIfDoneEligibilityChecks {
+    checkIfAlreadyEnrolled { nino ⇒
+      checkIfDoneEligibilityChecks(nino) {
         case (nsiUserInfo, _) ⇒ {
           Ok(views.html.register.confirm_details(nsiUserInfo))
         }
@@ -60,7 +60,7 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
 
   def confirmEmail(confirmedEmail: String): Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
     checkIfAlreadyEnrolled { nino ⇒
-      checkIfDoneEligibilityChecks {
+      checkIfDoneEligibilityChecks(nino) {
         case (nsiUserInfo, _) ⇒
           val result = for {
             _ ← sessionCacheConnector.put(HTSSession(Some(nsiUserInfo), Some(confirmedEmail)))
@@ -69,7 +69,7 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
 
           result.fold[Result](
             { e ⇒
-              logger.warn(s"For NINO [$nino]: Could not write confirmed email: $e")
+              logger.warn(s"Could not write confirmed email: $e", nino)
               InternalServerError
             }, { _ ⇒
               SeeOther(routes.RegisterController.getCreateAccountHelpToSavePage().url)
@@ -80,8 +80,8 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
   }(redirectOnLoginURL = FrontendAppConfig.checkEligibilityUrl)
 
   def getCreateAccountHelpToSavePage: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
-    checkIfAlreadyEnrolled { _ ⇒
-      checkIfDoneEligibilityChecks {
+    checkIfAlreadyEnrolled { nino ⇒
+      checkIfDoneEligibilityChecks(nino) {
         case (_, confirmedEmail) ⇒
           confirmedEmail.fold[Future[Result]](
             SeeOther(routes.RegisterController.getConfirmDetailsPage.url))(
@@ -92,7 +92,7 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
 
   def createAccountHelpToSave: Action[AnyContent] = authorisedForHtsWithInfo { implicit request ⇒ implicit htsContext ⇒
     checkIfAlreadyEnrolled { nino ⇒
-      checkIfDoneEligibilityChecks {
+      checkIfDoneEligibilityChecks(nino) {
         case (nsiUserInfo, confirmedEmail) ⇒
           confirmedEmail.fold[Future[Result]](
             SeeOther(routes.RegisterController.getConfirmDetailsPage.url)
@@ -101,16 +101,16 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
               helpToSaveService.createAccount(nsiUserInfo.updateEmail(email)).leftMap(submissionFailureToString).fold(
                 error ⇒ {
                   // TODO: error or warning?
-                  logger.error(s"Could not create account: $error")
+                  logger.error(s"Could not create account: $error", nino)
                   Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page(s"Account creation failed: $error"))
                 },
                 _ ⇒ {
-                  logger.info(s"Successfully created account for $nino")
+                  logger.info("Successfully created account", nino)
                   // start the process to enrol the user but don't worry about the result
                   helpToSaveService.enrolUser(nino).value.onComplete{
-                    case Failure(e)        ⇒ logger.warn(s"For NINO [$nino]: Could not start process to enrol user, future failed: $e")
-                    case Success(Left(e))  ⇒ logger.warn(s"For NINO [$nino]: Could not start process to enrol user: $e")
-                    case Success(Right(_)) ⇒ logger.info(s"For NINO [$nino]: Process started to enrol user")
+                    case Failure(e)        ⇒ logger.warn(s"Could not start process to enrol user, future failed: $e", nino)
+                    case Success(Left(e))  ⇒ logger.warn(s"Could not start process to enrol user: $e", nino)
+                    case Success(Right(_)) ⇒ logger.info(s"Process started to enrol user", nino)
                   }
 
                   Ok(uk.gov.hmrc.helptosavefrontend.views.html.core.stub_page("Successfully created account"))
@@ -127,8 +127,8 @@ class RegisterController @Inject() (val messagesApi:           MessagesApi,
    * that they are not eligible show the user the 'you are not eligible page'. Otherwise, perform the
    * given action if the the session data indicates that they are eligible
    */
-  private def checkIfDoneEligibilityChecks(ifEligible: (NSIUserInfo, Option[Email]) ⇒ Future[Result])(implicit htsContext: HtsContext, hc: HeaderCarrier): Future[Result] =
-    checkSession {
+  private def checkIfDoneEligibilityChecks(nino: NINO)(ifEligible: (NSIUserInfo, Option[Email]) ⇒ Future[Result])(implicit htsContext: HtsContext, hc: HeaderCarrier): Future[Result] =
+    checkSession(nino) {
       // no session data => user has not gone through the journey this session => take them to eligibility checks
       SeeOther(routes.EligibilityCheckController.getCheckEligibility().url)
     } {

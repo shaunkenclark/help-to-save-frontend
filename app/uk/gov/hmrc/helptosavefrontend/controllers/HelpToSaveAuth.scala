@@ -44,7 +44,9 @@ class HelpToSaveAuth(app: Application, frontendAuthConnector: FrontendAuthConnec
 
   override def authConnector: AuthConnector = frontendAuthConnector
 
-  override def config: Configuration = app.configuration
+  override val configuration: Configuration = app.configuration
+
+  override def config: Configuration = configuration
 
   override def env: Environment = Environment(app.path, app.classloader, app.mode)
 

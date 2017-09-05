@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosavefrontend.util
 
 import javax.inject.{Inject, Singleton}
 
+import play.api.Configuration
 import uk.gov.hmrc.helptosavefrontend.config.FrontendAuditConnector
 import uk.gov.hmrc.helptosavefrontend.models.HTSEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -25,7 +26,7 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
-class HTSAuditor @Inject() () extends Logging {
+class HTSAuditor @Inject() (val configuration: Configuration) extends Logging {
   val auditConnector: AuditConnector = FrontendAuditConnector
 
   def sendEvent(event: HTSEvent): Unit = {

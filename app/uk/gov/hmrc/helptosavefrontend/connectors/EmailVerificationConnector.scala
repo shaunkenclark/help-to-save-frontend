@@ -43,6 +43,8 @@ trait EmailVerificationConnector {
 class EmailVerificationConnectorImpl @Inject() (http: WSHttp)(implicit crypto: Crypto)
   extends EmailVerificationConnector with ServicesConfig with Logging {
 
+  override val configuration: Configuration = runModeConfiguration
+
   val linkTTLMinutes: Int = getInt("microservice.services.email-verification.linkTTLMinutes")
   val emailVerifyBaseURL: String = baseUrl("email-verification")
   val verifyEmailURL: String = s"$emailVerifyBaseURL/email-verification/verification-requests"
@@ -64,28 +66,28 @@ class EmailVerificationConnectorImpl @Inject() (http: WSHttp)(implicit crypto: C
     http.post[EmailVerificationRequest](verifyEmailURL, verificationRequest).map[Either[VerifyEmailError, Unit]]{ (response: HttpResponse) ⇒
       response.status match {
         case OK | CREATED ⇒
-          logger.info(s"[EmailVerification] - Email verification successfully triggered")
+          logger.info(s"[EmailVerification] - Email verification successfully triggered", nino)
           Right(())
 
         case BAD_REQUEST ⇒
-          logger.warn("[EmailVerification] - Bad Request from email verification service")
+          logger.warn("[EmailVerification] - Bad Request from email verification service", nino)
           Left(RequestNotValidError)
 
         case CONFLICT ⇒
-          logger.info("[EmailVerification] - Email address already verified")
+          logger.info("[EmailVerification] - Email address already verified", nino)
           Left(AlreadyVerified)
 
         case SERVICE_UNAVAILABLE ⇒
-          logger.warn("[EmailVerification] - Email Verification service not currently available")
+          logger.warn("[EmailVerification] - Email Verification service not currently available", nino)
           Left(VerificationServiceUnavailable)
 
         case status ⇒
-          logger.warn(s"[EmailVerification] - Unexpected status $status received from email verification body = ${response.body}")
+          logger.warn(s"[EmailVerification] - Unexpected status $status received from email verification body = ${response.body}", nino)
           Left(BackendError)
       }
     }.recover{
       case NonFatal(e) ⇒
-        logger.warn(s"Error while calling email verification service: ${e.getMessage}")
+        logger.warn(s"Error while calling email verification service: ${e.getMessage}", nino)
         Left(BackendError)
     }
   }
