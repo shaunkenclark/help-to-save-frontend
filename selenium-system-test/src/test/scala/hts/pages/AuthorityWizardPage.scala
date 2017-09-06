@@ -44,6 +44,42 @@ object AuthorityWizardPage extends WebPage {
     submit()
   }
 
+  private def fillInAuthDetailsApartFromSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)
+                                               (implicit driver: WebDriver): Unit = {
+    setRedirect(redirectUrl)
+    setConfidenceLevel(confidence)
+    setCredentialStrength(credentialStrength)
+    setNino(nino)
+    setGivenName("GivenName")
+    setDateOfBirth("1980-12-20")
+    setAddressLine1("AddressLine1")
+    setAddressLine2("AddressLine2")
+    setAddressLine3("AddressLine3")
+    setAddressLine4("AddressLine4")
+    setAddressLine5("AddressLine5")
+    setPostCode("S24AH")
+    setCountryCode("01")
+    submit()
+  }
+
+  private def fillInAuthDetailsApartFromFirstAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)
+                                               (implicit driver: WebDriver): Unit = {
+    setRedirect(redirectUrl)
+    setConfidenceLevel(confidence)
+    setCredentialStrength(credentialStrength)
+    setNino(nino)
+    setGivenName("GivenName")
+    setFamilyName("FamilyName")
+    setDateOfBirth("1980-12-20")
+    setAddressLine2("AddressLine2")
+    setAddressLine3("AddressLine3")
+    setAddressLine4("AddressLine4")
+    setAddressLine5("AddressLine5")
+    setPostCode("S24AH")
+    setCountryCode("01")
+    submit()
+  }
+
   def goToPage()(implicit driver: WebDriver): Unit =
     go to s"${Configuration.authHost}/auth-login-stub/gg-sign-in"
 
