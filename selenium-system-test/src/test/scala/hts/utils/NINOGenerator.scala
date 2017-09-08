@@ -24,26 +24,26 @@ trait NINOGenerator {
 
   private var current = generator.nextNino.value
 
-  private def generateNINO: String = {
-    current = generator.nextNino.value
+  private def generateNINO(eligible: Boolean): String = {
+    val nino = generator.nextNino.value
+    current = if (eligible) toEligible(nino) else toIneligible(nino)
     current
   }
 
   private def toEligible(nino: String) = "AE" + nino.drop(2)
 
-  def generateEligibleNINO: String = toEligible(generateNINO)
+  private def toIneligible(nino: String) = "NA" + nino.drop(2)
 
-  def generateIneligibleNINO: String = {
-    val ineligibleNino = "NA" + generateNINO.drop(2)
-    ineligibleNino
-  }
+  def generateEligibleNINO: String = generateNINO(true)
 
-  def currentEligibleNINO: String = toEligible(current)
+  def generateIneligibleNINO: String = generateNINO(false)
+
+  def currentNINO: String = toEligible(current)
 
 }
 
-//object NINOGenerator {
-//  private val generator = new Generator()
-//
-//  private var current = generator.nextNino.value
-//}
+object NINOGenerator {
+  private val generator = new Generator()
+
+  private var current = generator.nextNino.value
+}

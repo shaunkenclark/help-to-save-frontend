@@ -21,12 +21,14 @@ import hts.utils.{Configuration, NINOGenerator}
 
 class EligibilitySteps extends Steps with NINOGenerator {
 
+  //var nino: Option[String] = None
+
   Given("""^an user is in receipt of working tax credit$""") { () ⇒
-    nino = Some(generateEligibleNINO)
+    generateEligibleNINO
   }
 
   When("""^they apply for Help to Save$""") { () ⇒
-    AuthorityWizardPage.authenticateUser(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", nino.getOrElse(""))
+    AuthorityWizardPage.authenticateUser(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO)
   }
 
   Then("""^they see that they are eligible for Help to Save$""") { () ⇒
@@ -38,7 +40,7 @@ class EligibilitySteps extends Steps with NINOGenerator {
   }
 
   Given("""^an user is NOT in receipt of working tax credit$""") { () ⇒
-    nino = Some(generateIneligibleNINO)
+    generateIneligibleNINO
   }
 
   Then("""^they see that they are NOT eligible for Help to Save$""") { () ⇒

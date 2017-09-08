@@ -22,11 +22,11 @@ import hts.utils.{Configuration, NINOGenerator}
 class MissingUserInfoSteps extends Steps with NINOGenerator {
 
   When("""^they apply for Help to Save with missing surname$""") { () ⇒
-    AuthorityWizardPage.authenticateUserNoSurname(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", nino.getOrElse(""))
+    AuthorityWizardPage.authenticateUserNoSurname(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO)
   }
 
   When("""^they apply for Help to Save with missing address line$""") { () ⇒
-    AuthorityWizardPage.authenticateUserMissingAddressLine(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", nino.getOrElse(""))
+    AuthorityWizardPage.authenticateUserMissingAddressLine(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO)
   }
 
   Then("""^they see that their surname couldn't be retrieved$""") { () ⇒
