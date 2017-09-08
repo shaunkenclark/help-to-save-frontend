@@ -29,7 +29,7 @@ object WiremockHelper {
 }
 
 trait WiremockHelper {
-  self: OneServerPerSuite =>
+  self: OneServerPerSuite ⇒
 
   import WiremockHelper._
 
@@ -41,36 +41,36 @@ trait WiremockHelper {
     wireMockServer.start()
   }
 
-    def stopWiremock() = wireMockServer.stop()
+  def stopWiremock() = wireMockServer.stop()
 
-    def resetWiremock() = WireMock.reset()
+  def resetWiremock() = WireMock.reset()
 
-    def stubGet(url: String, status: Integer, body: String) =
-      stubFor(get(urlMatching(url))
-        .willReturn(
-          aResponse().
-            withStatus(status).
-            withBody(body)
-        )
+  def stubGet(url: String, status: Integer, body: String) =
+    stubFor(get(urlMatching(url))
+      .willReturn(
+        aResponse().
+          withStatus(status).
+          withBody(body)
       )
+    )
 
-    def stubPost(url: String, status: Integer, responseBody: String) =
-      stubFor(post(urlMatching(url))
-        .willReturn(
-          aResponse().
-            withStatus(status).
-            withBody(responseBody)
-        )
+  def stubPost(url: String, status: Integer, responseBody: String) =
+    stubFor(post(urlMatching(url))
+      .willReturn(
+        aResponse().
+          withStatus(status).
+          withBody(responseBody)
       )
+    )
 
-    def stubPut(url: String, status: Integer, responseBody: String) =
-      stubFor(put(urlMatching(url))
-        .willReturn(
-          aResponse().
-            withStatus(status).
-            withBody(responseBody)
-        )
+  def stubPut(url: String, status: Integer, responseBody: String) =
+    stubFor(put(urlMatching(url))
+      .willReturn(
+        aResponse().
+          withStatus(status).
+          withBody(responseBody)
       )
+    )
 
 }
 

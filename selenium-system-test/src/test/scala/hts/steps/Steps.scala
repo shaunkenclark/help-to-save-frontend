@@ -28,6 +28,8 @@ import org.scalatest.Matchers
 
 private[steps] trait Steps extends ScalaDsl with EN with Matchers {
 
+  var nino: Option[String] = Some("AE123456A")
+
   import Steps._
 
   /** Tries to get the value of [[_driver]] - will throw an exception if it doesn't exist */

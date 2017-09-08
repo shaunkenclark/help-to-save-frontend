@@ -41,3 +41,9 @@ trait NINOGenerator {
   def currentEligibleNINO: String = toEligible(current)
 
 }
+
+//object NINOGenerator {
+//  private val generator = new Generator()
+//
+//  private var current = generator.nextNino.value
+//}

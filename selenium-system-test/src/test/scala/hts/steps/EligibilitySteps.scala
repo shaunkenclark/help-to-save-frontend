@@ -21,8 +21,6 @@ import hts.utils.{Configuration, NINOGenerator}
 
 class EligibilitySteps extends Steps with NINOGenerator {
 
-  var nino: Option[String] = None
-
   Given("""^an user is in receipt of working tax credit$""") { () ⇒
     nino = Some(generateEligibleNINO)
   }

@@ -22,6 +22,7 @@ import org.openqa.selenium.WebDriver
 object AuthorityWizardPage extends WebPage {
 
   def authenticateUser(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
+    println("######## nino from authenticate user is: " + nino)
     AuthorityWizardPage.goToPage()
     fillInAuthDetails(redirectUrl, confidence, credentialStrength, nino)
   }
@@ -44,11 +45,17 @@ object AuthorityWizardPage extends WebPage {
     submit()
   }
 
-  private def fillInAuthDetailsApartFromSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)
-                                               (implicit driver: WebDriver): Unit = {
+  def authenticateUserNoSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
+    println("######## nino from authenticate user is: " + nino)
+    AuthorityWizardPage.goToPage()
+    fillInAuthDetailsApartFromSurname(redirectUrl, confidence, credentialStrength, nino)
+  }
+
+  private def fillInAuthDetailsApartFromSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
     setRedirect(redirectUrl)
     setConfidenceLevel(confidence)
     setCredentialStrength(credentialStrength)
+    println("################ nino: " + nino)
     setNino(nino)
     setGivenName("GivenName")
     setDateOfBirth("1980-12-20")
@@ -62,8 +69,12 @@ object AuthorityWizardPage extends WebPage {
     submit()
   }
 
-  private def fillInAuthDetailsApartFromFirstAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)
-                                               (implicit driver: WebDriver): Unit = {
+  def authenticateUserMissingAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
+    AuthorityWizardPage.goToPage()
+    fillInAuthDetailsApartFromFirstAddressLine(redirectUrl, confidence, credentialStrength, nino)
+  }
+
+  private def fillInAuthDetailsApartFromFirstAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
     setRedirect(redirectUrl)
     setConfidenceLevel(confidence)
     setCredentialStrength(credentialStrength)

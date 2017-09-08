@@ -29,10 +29,9 @@ trait LoginStub extends SessionCookieBaker {
     cookieValue(cookieData(additionalData))
   }
 
-
   def stubSuccessfulLogin(withSignIn: Boolean = false) = {
 
-    if( withSignIn ) {
+    if (withSignIn) {
       val continueUrl = "/wibble"
       stubFor(get(urlEqualTo(s"/gg/sign-in?continue=${continueUrl}"))
         .willReturn(aResponse()
@@ -66,14 +65,14 @@ trait LoginStub extends SessionCookieBaker {
 
 trait SessionCookieBaker {
   val cookieKey = "gvBoGdgzqG1AarzF1LY0zQ=="
-  def cookieValue(sessionData: Map[String,String]) = {
-    def encode(data: Map[String, String]): PlainText = {
-      val encoded = data.map {
-        case (k, v) => URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
-      }.mkString("&")
-      val key = "yNhI04vHs9<_HWbC`]20u`37=NGLGYY5:0Tg5?y`W<NoJnXWqmjcgZBec@rOxb^G".getBytes
-      PlainText(Crypto.sign(encoded, key) + "-" + encoded)
-    }
+  def cookieValue(sessionData: Map[String, String]) = {
+      def encode(data: Map[String, String]): PlainText = {
+        val encoded = data.map {
+          case (k, v) ⇒ URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
+        }.mkString("&")
+        val key = "yNhI04vHs9<_HWbC`]20u`37=NGLGYY5:0Tg5?y`W<NoJnXWqmjcgZBec@rOxb^G".getBytes
+        PlainText(Crypto.sign(encoded, key) + "-" + encoded)
+      }
 
     val encodedCookie = encode(sessionData)
     val encrypted = CompositeSymmetricCrypto.aesGCM(cookieKey, Seq()).encrypt(encodedCookie).value
@@ -90,7 +89,7 @@ trait SessionCookieBaker {
     val decrypted = CompositeSymmetricCrypto.aesGCM(cookieKey, Seq()).decrypt(Crypted(cookieData)).value
     val result = decrypted.split("&")
       .map(_.split("="))
-      .map { case Array(k, v) => (k, URLDecoder.decode(v, StandardCharsets.UTF_8.name()))}
+      .map { case Array(k, v) ⇒ (k, URLDecoder.decode(v, StandardCharsets.UTF_8.name())) }
       .toMap
 
     result

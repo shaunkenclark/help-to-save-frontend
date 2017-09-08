@@ -32,16 +32,16 @@ import play.api.test.FakeApplication
 
 class CreateAccountIntegrationSpec
   extends WordSpec
-    with WiremockHelper
-    with OneServerPerSuite
-    with LoginStub
-    with BeforeAndAfterEach
-    with BeforeAndAfterAll
-    with ScalaFutures
-    with Matchers {
+  with WiremockHelper
+  with OneServerPerSuite
+  with LoginStub
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll
+  with ScalaFutures
+  with Matchers {
 
   implicit val defaultPatience: PatienceConfig =
-    PatienceConfig(timeout = Span(5, Seconds), interval = Span(50, Millis))
+    PatienceConfig(timeout  = Span(5, Seconds), interval = Span(50, Millis))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -77,15 +77,12 @@ class CreateAccountIntegrationSpec
     "microservice.services.auth.port" -> s"$mockPort"
   ))
 
-
   def createAccountHelpToSave(): WSResponse =
     wsClient
       .url(s"http://localhost:$port/help-to-save/register/create-an-account") //???
       .withHeaders(HeaderNames.COOKIE -> getSessionCookie())
       .get()
       .futureValue
-
-
 
   val userId = "/auth/oid/1234567890"
 
@@ -126,16 +123,15 @@ class CreateAccountIntegrationSpec
     )
   }
 
-
   "The create account endpoint" when {
 
     "the user info is in the keystore" must {
 
       "return a 200 if the account creation is successful" in {
         val contactDetails = ContactDetails("address line1", "address line2", Some("line3"), Some("line4"), None, "BN43 XXX",
-          Some("GB"), "sarah@gmail.com", None, "02")
+                                                                              Some("GB"), "sarah@gmail.com", None, "02")
         val userInfo =
-          NSIUserInfo("Forename", "Surname", LocalDate.of(1999,12,12), "AE12345XX", contactDetails, "online")
+          NSIUserInfo("Forename", "Surname", LocalDate.of(1999, 12, 12), "AE12345XX", contactDetails, "online")
 
         setupSimpleAuthMocks()
         //stubSuccessfulLogin()

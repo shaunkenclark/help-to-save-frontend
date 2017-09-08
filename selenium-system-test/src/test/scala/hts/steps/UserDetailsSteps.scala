@@ -26,7 +26,7 @@ import scala.collection.mutable
 class UserDetailsSteps extends Steps with NINOGenerator {
 
   var name: Option[String] = None
-  var nino: Option[String] = None
+  //var nino: Option[String] = None
   var dateOfBirth: Option[String] = None
   var email: Option[String] = None
 
