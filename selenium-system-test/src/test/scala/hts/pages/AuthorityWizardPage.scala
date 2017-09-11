@@ -22,7 +22,6 @@ import org.openqa.selenium.WebDriver
 object AuthorityWizardPage extends WebPage {
 
   def authenticateUser(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    println("######## nino from authenticate user is: " + nino)
     AuthorityWizardPage.goToPage()
     fillInAuthDetails(redirectUrl, confidence, credentialStrength, nino)
   }
@@ -45,8 +44,24 @@ object AuthorityWizardPage extends WebPage {
     submit()
   }
 
+  private def fillInAuthDetailsWithoutSubmit(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
+    setRedirect(redirectUrl)
+    setConfidenceLevel(confidence)
+    setCredentialStrength(credentialStrength)
+    setNino(nino)
+    setGivenName("GivenName")
+    setFamilyName("FamilyName")
+    setDateOfBirth("1980-12-20")
+    setAddressLine1("AddressLine1")
+    setAddressLine2("AddressLine2")
+    setAddressLine3("AddressLine3")
+    setAddressLine4("AddressLine4")
+    setAddressLine5("AddressLine5")
+    setPostCode("S24AH")
+    setCountryCode("01")
+  }
+
   def authenticateUserNoSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    println("######## nino from authenticate user is: " + nino)
     AuthorityWizardPage.goToPage()
     fillInAuthDetailsApartFromSurname(redirectUrl, confidence, credentialStrength, nino)
   }
@@ -55,7 +70,6 @@ object AuthorityWizardPage extends WebPage {
     setRedirect(redirectUrl)
     setConfidenceLevel(confidence)
     setCredentialStrength(credentialStrength)
-    println("################ nino: " + nino)
     setNino(nino)
     setGivenName("GivenName")
     setDateOfBirth("1980-12-20")
@@ -91,6 +105,26 @@ object AuthorityWizardPage extends WebPage {
     submit()
   }
 
+  def getHTMLFieldName(field: String)(implicit driver: WebDriver): String = {
+    field match {
+      case "Forename"      ⇒ "givenName"
+      case "Surname"       ⇒ "familyName"
+      case "date of birth" ⇒ "dateOfBirth"
+      case "address1"      ⇒ "address.line1"
+      case "address2"      ⇒ "address.line2"
+      case "postcode"      ⇒ "address.postCode"
+      case "country code"  ⇒ "address.countryCode"
+    }
+  }
+
+  def authenticateUserWithMissingMandatoryData(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String, missingField: String)(implicit driver: WebDriver): Unit = {
+    AuthorityWizardPage.goToPage()
+    fillInAuthDetailsWithoutSubmit(redirectUrl, confidence, credentialStrength, nino)
+    clearTextField(missingField)
+    Thread.sleep(2000)
+    submit()
+  }
+
   def goToPage()(implicit driver: WebDriver): Unit =
     go to s"${Configuration.authHost}/auth-login-stub/gg-sign-in"
 
@@ -111,6 +145,9 @@ object AuthorityWizardPage extends WebPage {
 
   def setGivenName(givenName: String)(implicit driver: WebDriver): Unit =
     find(name("itmp.givenName")).foreach(_.underlying.sendKeys(givenName))
+
+  def clearTextField(fieldName: String)(implicit driver: WebDriver): Unit =
+    find(name("itmp." + getHTMLFieldName(fieldName))).foreach(_.underlying.clear)
 
   def setFamilyName(familyName: String)(implicit driver: WebDriver): Unit =
     find(name("itmp.familyName")).foreach(_.underlying.sendKeys(familyName))
