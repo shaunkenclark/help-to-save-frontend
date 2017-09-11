@@ -21,30 +21,8 @@ import hts.utils.{Configuration, NINOGenerator}
 
 class MissingUserInfoSteps extends Steps with NINOGenerator {
 
-  When("""^an applicant's "([^"]*)" is missing from DES$""") { (field: String) ⇒
-    AuthorityWizardPage.authenticateUserWithMissingMandatoryData(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO, field)
-  }
-
   When("""^an applicant applies for Help to Save and their "([^"]*)" is missing from DES$""") { (field: String) ⇒
     AuthorityWizardPage.authenticateUserWithMissingMandatoryData(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO, field)
-  }
-
-  When("""^they apply for Help to Save with missing surname$""") { () ⇒
-    AuthorityWizardPage.authenticateUserNoSurname(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO)
-  }
-
-  When("""^they apply for Help to Save with missing address line$""") { () ⇒
-    AuthorityWizardPage.authenticateUserMissingAddressLine(s"${Configuration.host}/help-to-save/check-eligibility", 200, "Strong", currentNINO)
-  }
-
-  Then("""^they see that their surname couldn't be retrieved$""") { () ⇒
-    Page.getPageContent should include("We couldn't retrieve the following details")
-    Page.getPageContent should include ("Surname")
-  }
-
-  Then("""^they see that the first line of their address couldn't be retrieved$""") { () ⇒
-    Page.getPageContent should include("We couldn't retrieve the following details")
-    Page.getPageContent should include ("address1")
   }
 
   Then("""^they see that their "([^"]*)" is missing$""") { (field: String) ⇒

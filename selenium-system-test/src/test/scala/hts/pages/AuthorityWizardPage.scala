@@ -61,50 +61,6 @@ object AuthorityWizardPage extends WebPage {
     setCountryCode("01")
   }
 
-  def authenticateUserNoSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    AuthorityWizardPage.goToPage()
-    fillInAuthDetailsApartFromSurname(redirectUrl, confidence, credentialStrength, nino)
-  }
-
-  private def fillInAuthDetailsApartFromSurname(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    setRedirect(redirectUrl)
-    setConfidenceLevel(confidence)
-    setCredentialStrength(credentialStrength)
-    setNino(nino)
-    setGivenName("GivenName")
-    setDateOfBirth("1980-12-20")
-    setAddressLine1("AddressLine1")
-    setAddressLine2("AddressLine2")
-    setAddressLine3("AddressLine3")
-    setAddressLine4("AddressLine4")
-    setAddressLine5("AddressLine5")
-    setPostCode("S24AH")
-    setCountryCode("01")
-    submit()
-  }
-
-  def authenticateUserMissingAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    AuthorityWizardPage.goToPage()
-    fillInAuthDetailsApartFromFirstAddressLine(redirectUrl, confidence, credentialStrength, nino)
-  }
-
-  private def fillInAuthDetailsApartFromFirstAddressLine(redirectUrl: String, confidence: Int, credentialStrength: String, nino: String)(implicit driver: WebDriver): Unit = {
-    setRedirect(redirectUrl)
-    setConfidenceLevel(confidence)
-    setCredentialStrength(credentialStrength)
-    setNino(nino)
-    setGivenName("GivenName")
-    setFamilyName("FamilyName")
-    setDateOfBirth("1980-12-20")
-    setAddressLine2("AddressLine2")
-    setAddressLine3("AddressLine3")
-    setAddressLine4("AddressLine4")
-    setAddressLine5("AddressLine5")
-    setPostCode("S24AH")
-    setCountryCode("01")
-    submit()
-  }
-
   def getHTMLFieldName(field: String)(implicit driver: WebDriver): String = {
     field match {
       case "Forename"      ⇒ "givenName"
