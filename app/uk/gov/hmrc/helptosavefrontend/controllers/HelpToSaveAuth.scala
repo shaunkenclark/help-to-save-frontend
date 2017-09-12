@@ -112,25 +112,45 @@ class HelpToSaveAuth(app: Application, frontendAuthConnector: FrontendAuthConnec
                           itmpDob:     Option[LocalDate],
                           itmpAddress: ItmpAddress): Either[MissingUserInfos, UserInfo] = {
 
+    println(
+      s"""
+        |nino:        $nino
+        |name:        $name
+        |email:       $email
+        |dob:         $dob
+        |itmpName:    $itmpName
+        |itmpDoB:     $itmpDob
+        |itmpAddress: $itmpAddress
+      """.stripMargin)
+
     val givenNameValidation: ValidatedNel[MissingUserInfo, String] =
-      itmpName.givenName.orElse(name.name)
+      itmpName.givenName
+        .filter(_.nonEmpty)
         .toValidNel(MissingUserInfo.GivenName)
 
     val surnameValidation =
       itmpName.familyName.orElse(name.lastName)
+        .filter(_.nonEmpty)
         .toValidNel(MissingUserInfo.Surname)
 
     val dateOfBirthValidation =
-      itmpDob.orElse(dob)
+      itmpDob
         .toValidNel(MissingUserInfo.DateOfBirth)
 
-    val emailValidation = email.toValidNel(MissingUserInfo.Email)
+    val emailValidation = email.filter(_.nonEmpty).toValidNel(MissingUserInfo.Email)
+
+    val addressValidation = {
+        def validate(s: Option[String]): ValidatedNel[MissingUserInfo, String] = s.toValidNel(MissingUserInfo.Contact)
+      (validate(itmpAddress.line1) |@| validate(itmpAddress.line2) |@| validate(itmpAddress.postCode)).map{
+        case _ ⇒ itmpAddress
+      }
+    }
 
     val validation: ValidatedNel[MissingUserInfo, UserInfo] =
-      (givenNameValidation |@| surnameValidation |@| dateOfBirthValidation |@| emailValidation)
+      (givenNameValidation |@| surnameValidation |@| dateOfBirthValidation |@| emailValidation |@| addressValidation)
         .map{
-          case (givenName, surname, jodaDob, email) ⇒
-            UserInfo(givenName, surname, nino, toJavaDate(jodaDob), email, Address(itmpAddress))
+          case (givenName, surname, jodaDob, email, address) ⇒
+            UserInfo(givenName, surname, nino, toJavaDate(jodaDob), email, Address(address))
         }
 
     validation
